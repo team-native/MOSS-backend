@@ -1,7 +1,7 @@
 package com.teamnative.moss.domain.auth.service;
 
 import com.teamnative.moss.domain.auth.dto.StudentSignupRequest;
-import com.teamnative.moss.domain.auth.dto.StudentSignupResponse;
+import com.teamnative.moss.domain.auth.dto.SignupResponse;
 import com.teamnative.moss.domain.auth.entity.Role;
 import com.teamnative.moss.domain.auth.entity.UserAccount;
 import com.teamnative.moss.domain.auth.repository.UserRepository;
@@ -22,11 +22,11 @@ public class StudentSignupService {
     }
 
     @Transactional
-    public StudentSignupResponse signup(StudentSignupRequest request) {
+    public SignupResponse signup(StudentSignupRequest request) {
         if (request.role() != Role.STUDENT) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "학생 회원가입에서는 역할을 STUDENT로 입력해야 합니다."
+                    "학생 회원가입에서는 가입 유형을 STUDENT로 입력해야 합니다."
             );
         }
         if (userRepository.existsByEmail(request.email())) {
@@ -53,7 +53,7 @@ public class StudentSignupService {
         );
         UserAccount savedUser = userRepository.save(user);
 
-        return new StudentSignupResponse(
+        return new SignupResponse(
                 savedUser.getId(),
                 savedUser.getName(),
                 savedUser.getEmail(),

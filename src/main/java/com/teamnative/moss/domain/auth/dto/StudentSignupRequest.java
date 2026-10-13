@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record StudentSignupRequest(
-        @NotNull(message = "역할을 선택해주세요.")
+        @NotNull(message = "가입 유형을 선택해 주세요.")
         Role role,
 
         @NotBlank(message = "이메일을 입력해주세요.")

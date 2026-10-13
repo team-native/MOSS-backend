@@ -38,7 +38,7 @@ public class UserAccount {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = true, length = 20)
     private Grade grade;
 
     @Column(nullable = false, updatable = false)
