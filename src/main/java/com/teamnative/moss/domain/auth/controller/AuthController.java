@@ -7,9 +7,11 @@ import com.teamnative.moss.domain.auth.dto.LoginRequest;
 import com.teamnative.moss.domain.auth.dto.LoginResponse;
 import com.teamnative.moss.domain.auth.dto.RefreshTokenRequest;
 import com.teamnative.moss.domain.auth.dto.SignupResponse;
+import com.teamnative.moss.domain.auth.dto.SendEmailRequest;
 import com.teamnative.moss.domain.auth.dto.StudentSignupRequest;
 import com.teamnative.moss.domain.auth.service.BusinessSignupService;
 import com.teamnative.moss.domain.auth.service.FindIdService;
+import com.teamnative.moss.domain.auth.service.EmailVerificationService;
 import com.teamnative.moss.domain.auth.service.LoginService;
 import com.teamnative.moss.domain.auth.service.StudentSignupService;
 import com.teamnative.moss.global.dto.ApiResponse;
@@ -31,17 +33,20 @@ public class AuthController {
     private final BusinessSignupService businessSignupService;
     private final LoginService loginService;
     private final FindIdService findIdService;
+    private final EmailVerificationService emailVerificationService;
 
     public AuthController(
             StudentSignupService studentSignupService,
             BusinessSignupService businessSignupService,
             LoginService loginService,
-            FindIdService findIdService
+            FindIdService findIdService,
+            EmailVerificationService emailVerificationService
     ) {
         this.studentSignupService = studentSignupService;
         this.businessSignupService = businessSignupService;
         this.loginService = loginService;
         this.findIdService = findIdService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @PostMapping("/signup/business")
@@ -76,5 +81,12 @@ public class AuthController {
     @Operation(summary = "아이디 찾기", description = "이름과 전화번호로 가입된 이메일과 계정 생성일을 조회합니다.")
     public ApiResponse<FindIdResponse> findId(@Valid @RequestBody FindIdRequest request) {
         return ApiResponse.success("계정 정보를 찾았습니다.", findIdService.findId(request));
+    }
+
+    @PostMapping("/send-email")
+    @Operation(summary = "이메일 인증번호 발송", description = "입력한 이메일 주소로 5분간 유효한 인증번호를 발송합니다.")
+    public ApiResponse<Void> sendEmail(@Valid @RequestBody SendEmailRequest request) {
+        emailVerificationService.sendVerificationCode(request);
+        return ApiResponse.success("인증번호를 이메일로 발송했습니다.", null);
     }
 }
