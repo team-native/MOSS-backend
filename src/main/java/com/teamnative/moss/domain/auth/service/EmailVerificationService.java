@@ -1,9 +1,12 @@
 package com.teamnative.moss.domain.auth.service;
 
 import com.teamnative.moss.domain.auth.dto.SendEmailRequest;
+import com.teamnative.moss.domain.auth.dto.VerifyEmailRequest;
+import com.teamnative.moss.domain.auth.dto.VerifyEmailResponse;
 import com.teamnative.moss.domain.auth.entity.EmailVerification;
 import com.teamnative.moss.domain.auth.repository.EmailVerificationRepository;
 import java.security.SecureRandom;
+import java.util.Base64;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import org.springframework.beans.factory.ObjectProvider;
@@ -22,6 +25,8 @@ public class EmailVerificationService {
     private static final int CODE_BOUND = 1_000_000;
     private static final long CODE_TTL_MINUTES = 2;
     private static final long RESEND_INTERVAL_SECONDS = 60;
+    private static final int MAX_VERIFICATION_ATTEMPTS = 5;
+    private static final long RESET_TOKEN_TTL_MINUTES = 5;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final EmailVerificationRepository verificationRepository;
@@ -77,5 +82,44 @@ public class EmailVerificationService {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "인증 이메일을 발송하지 못했습니다. 잠시 후 다시 시도해 주세요.", exception);
         }
+    }
+
+    @Transactional(noRollbackFor = ResponseStatusException.class)
+    public VerifyEmailResponse verifyEmail(VerifyEmailRequest request) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        LocalDateTime now = LocalDateTime.now();
+        EmailVerification verification = verificationRepository.findByEmailForUpdate(email)
+                .orElseThrow(() -> invalidVerificationCode());
+
+        if (verification.isVerified() || !verification.getExpiresAt().isAfter(now)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "인증번호가 유효하지 않거나 만료되었습니다.");
+        }
+        if (verification.getVerificationAttempts() >= MAX_VERIFICATION_ATTEMPTS) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "인증번호 입력 횟수를 초과했습니다. 인증번호를 다시 요청해 주세요.");
+        }
+        if (!passwordEncoder.matches(request.code(), verification.getCodeHash())) {
+            verification.recordVerificationFailure();
+            verificationRepository.save(verification);
+            if (verification.getVerificationAttempts() >= MAX_VERIFICATION_ATTEMPTS) {
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                        "인증번호 입력 횟수를 초과했습니다. 인증번호를 다시 요청해 주세요.");
+            }
+            throw invalidVerificationCode();
+        }
+
+        byte[] tokenBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(tokenBytes);
+        String resetToken = Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+        LocalDateTime resetTokenExpiresAt = now.plusMinutes(RESET_TOKEN_TTL_MINUTES);
+        verification.markVerified(passwordEncoder.encode(resetToken), now, resetTokenExpiresAt);
+        verificationRepository.save(verification);
+        return new VerifyEmailResponse(resetToken, resetTokenExpiresAt);
+    }
+
+    private ResponseStatusException invalidVerificationCode() {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "인증번호가 유효하지 않거나 만료되었습니다.");
     }
 }

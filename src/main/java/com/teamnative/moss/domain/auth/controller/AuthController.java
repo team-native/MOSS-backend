@@ -8,6 +8,8 @@ import com.teamnative.moss.domain.auth.dto.LoginResponse;
 import com.teamnative.moss.domain.auth.dto.RefreshTokenRequest;
 import com.teamnative.moss.domain.auth.dto.SignupResponse;
 import com.teamnative.moss.domain.auth.dto.SendEmailRequest;
+import com.teamnative.moss.domain.auth.dto.VerifyEmailRequest;
+import com.teamnative.moss.domain.auth.dto.VerifyEmailResponse;
 import com.teamnative.moss.domain.auth.dto.StudentSignupRequest;
 import com.teamnative.moss.domain.auth.service.BusinessSignupService;
 import com.teamnative.moss.domain.auth.service.FindIdService;
@@ -89,4 +91,11 @@ public class AuthController {
         emailVerificationService.sendVerificationCode(request);
         return ApiResponse.success("인증번호를 이메일로 발송했습니다.", null);
     }
+
+    @PostMapping("/verify-email")
+    @Operation(summary = "이메일 인증번호 확인", description = "유효한 인증번호를 확인하고 비밀번호 재설정 토큰을 발급합니다.")
+    public ApiResponse<VerifyEmailResponse> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        return ApiResponse.success("이메일 인증에 성공했습니다.", emailVerificationService.verifyEmail(request));
+    }
+
 }

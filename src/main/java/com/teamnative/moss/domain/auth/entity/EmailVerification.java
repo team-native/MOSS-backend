@@ -22,6 +22,18 @@ public class EmailVerification {
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
 
+    @Column(name = "verification_attempts", nullable = false)
+    private int verificationAttempts;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "reset_token_hash", length = 100)
+    private String resetTokenHash;
+
+    @Column(name = "reset_token_expires_at")
+    private LocalDateTime resetTokenExpiresAt;
+
     protected EmailVerification() {
     }
 
@@ -30,15 +42,51 @@ public class EmailVerification {
         this.codeHash = codeHash;
         this.sentAt = sentAt;
         this.expiresAt = expiresAt;
+        this.verificationAttempts = 0;
     }
 
     public LocalDateTime getSentAt() {
         return sentAt;
     }
 
+    public String getCodeHash() {
+        return codeHash;
+    }
+
+    public boolean isVerified() {
+        return verifiedAt != null;
+    }
+
+    public LocalDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public int getVerificationAttempts() {
+        return verificationAttempts;
+    }
+
+    public void recordVerificationFailure() {
+        verificationAttempts++;
+    }
+
+    public void markVerified(String resetTokenHash, LocalDateTime verifiedAt, LocalDateTime resetTokenExpiresAt) {
+        this.verifiedAt = verifiedAt;
+        this.resetTokenHash = resetTokenHash;
+        this.resetTokenExpiresAt = resetTokenExpiresAt;
+    }
+
+    public void consumeResetToken() {
+        this.resetTokenHash = null;
+        this.resetTokenExpiresAt = null;
+    }
+
     public void replaceCode(String codeHash, LocalDateTime sentAt, LocalDateTime expiresAt) {
         this.codeHash = codeHash;
         this.sentAt = sentAt;
         this.expiresAt = expiresAt;
+        this.verificationAttempts = 0;
+        this.verifiedAt = null;
+        this.resetTokenHash = null;
+        this.resetTokenExpiresAt = null;
     }
 }
