@@ -80,6 +80,18 @@ public class EmailVerification {
         this.resetTokenExpiresAt = null;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public String getResetTokenHash() {
+        return resetTokenHash;
+    }
+
+    public LocalDateTime getResetTokenExpiresAt() {
+        return resetTokenExpiresAt;
+    }
+
     public void replaceCode(String codeHash, LocalDateTime sentAt, LocalDateTime expiresAt) {
         this.codeHash = codeHash;
         this.sentAt = sentAt;

@@ -1,10 +1,12 @@
 package com.teamnative.moss.domain.auth.service;
 
 import com.teamnative.moss.domain.auth.dto.SendEmailRequest;
+import com.teamnative.moss.domain.auth.dto.ResetPasswordRequest;
 import com.teamnative.moss.domain.auth.dto.VerifyEmailRequest;
 import com.teamnative.moss.domain.auth.dto.VerifyEmailResponse;
 import com.teamnative.moss.domain.auth.entity.EmailVerification;
 import com.teamnative.moss.domain.auth.repository.EmailVerificationRepository;
+import com.teamnative.moss.domain.auth.repository.UserRepository;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.time.LocalDateTime;
@@ -30,17 +32,20 @@ public class EmailVerificationService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final EmailVerificationRepository verificationRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final String fromAddress;
 
     public EmailVerificationService(
             EmailVerificationRepository verificationRepository,
+            UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             ObjectProvider<JavaMailSender> mailSenderProvider,
             @Value("${app.mail.from:no-reply@example.com}") String fromAddress
     ) {
         this.verificationRepository = verificationRepository;
+        this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.mailSenderProvider = mailSenderProvider;
         this.fromAddress = fromAddress;
@@ -116,6 +121,38 @@ public class EmailVerificationService {
         verification.markVerified(passwordEncoder.encode(resetToken), now, resetTokenExpiresAt);
         verificationRepository.save(verification);
         return new VerifyEmailResponse(resetToken, resetTokenExpiresAt);
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        LocalDateTime now = LocalDateTime.now();
+        EmailVerification candidate = verificationRepository.findAllByVerifiedAtIsNotNullAndResetTokenExpiresAtAfter(now).stream()
+                .filter(row -> row.getResetTokenHash() != null
+                        && passwordEncoder.matches(request.resetToken(), row.getResetTokenHash()))
+                .findFirst()
+                .orElseThrow(this::invalidResetToken);
+        EmailVerification verification = verificationRepository.findByEmailForUpdate(candidate.getEmail())
+                .filter(current -> current.isVerified()
+                        && current.getResetTokenExpiresAt() != null
+                        && current.getResetTokenExpiresAt().isAfter(now)
+                        && current.getResetTokenHash() != null
+                        && passwordEncoder.matches(request.resetToken(), current.getResetTokenHash()))
+                .orElseThrow(this::invalidResetToken);
+
+        var user = userRepository.findByEmailForPasswordUpdate(verification.getEmail())
+                .orElseThrow(this::invalidResetToken);
+        if (passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "새 비밀번호는 기존 비밀번호와 달라야 합니다.");
+        }
+
+        user.changePassword(passwordEncoder.encode(request.password()));
+        verification.consumeResetToken();
+    }
+
+    private ResponseStatusException invalidResetToken() {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "비밀번호 재설정 토큰이 유효하지 않거나 만료되었습니다.");
     }
 
     private ResponseStatusException invalidVerificationCode() {

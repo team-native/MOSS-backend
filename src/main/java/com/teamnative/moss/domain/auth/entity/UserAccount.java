@@ -87,6 +87,10 @@ public class UserAccount {
         return passwordHash;
     }
 
+    public void changePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

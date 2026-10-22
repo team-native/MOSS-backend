@@ -21,4 +21,8 @@ public interface UserRepository extends JpaRepository<UserAccount, Long> {
     @Query("select user from UserAccount user where user.email = :email")
     Optional<UserAccount> findByEmailForUpdate(@Param("email") String email);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from UserAccount user where user.email = :email")
+    Optional<UserAccount> findByEmailForPasswordUpdate(@Param("email") String email);
+
 }

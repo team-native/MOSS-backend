@@ -6,6 +6,7 @@ import com.teamnative.moss.domain.auth.dto.FindIdResponse;
 import com.teamnative.moss.domain.auth.dto.LoginRequest;
 import com.teamnative.moss.domain.auth.dto.LoginResponse;
 import com.teamnative.moss.domain.auth.dto.RefreshTokenRequest;
+import com.teamnative.moss.domain.auth.dto.ResetPasswordRequest;
 import com.teamnative.moss.domain.auth.dto.SignupResponse;
 import com.teamnative.moss.domain.auth.dto.SendEmailRequest;
 import com.teamnative.moss.domain.auth.dto.VerifyEmailRequest;
@@ -23,6 +24,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -98,4 +100,10 @@ public class AuthController {
         return ApiResponse.success("이메일 인증에 성공했습니다.", emailVerificationService.verifyEmail(request));
     }
 
+    @PatchMapping("/reset-password")
+    @Operation(summary = "비밀번호 재설정", description = "이메일 인증으로 발급된 토큰을 사용해 비밀번호를 재설정합니다.")
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        emailVerificationService.resetPassword(request);
+        return ApiResponse.success("비밀번호가 변경되었습니다.", null);
+    }
 }
