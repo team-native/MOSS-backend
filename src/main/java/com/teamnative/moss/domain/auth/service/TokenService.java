@@ -5,8 +5,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.security.MessageDigest;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,9 +67,9 @@ public class TokenService {
                 throw new IllegalArgumentException("Invalid token signature.");
             }
             JsonNode payload = objectMapper.readTree(Base64.getUrlDecoder().decode(parts[1]));
-            String email = payload.get("sub").asString();
+            String email = payload.get("sub").asText();
             long userId = payload.get("userId").asLong();
-            String type = payload.get("type").asString();
+            String type = payload.get("type").asText();
             long expiresAt = payload.get("exp").asLong();
             if (!expectedType.equals(type) || expiresAt <= Instant.now().getEpochSecond()
                     || email.isBlank() || userId <= 0) {
