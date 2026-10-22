@@ -1,6 +1,8 @@
 package com.teamnative.moss.global.exception;
 
 import com.teamnative.moss.global.dto.ApiResponse;
+import com.teamnative.moss.domain.auth.dto.LoginFailureData;
+import com.teamnative.moss.domain.auth.service.LoginFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -12,6 +14,16 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(LoginFailureException.class)
+    public ResponseEntity<ApiResponse<LoginFailureData>> handleLoginFailure(LoginFailureException exception) {
+        HttpStatus status = exception.getStatus();
+        LoginFailureData data = exception.getFailedAttempts() == null || exception.getMaxAttempts() == null
+                ? null
+                : new LoginFailureData(exception.getFailedAttempts(), exception.getMaxAttempts());
+        ApiResponse<LoginFailureData> response = new ApiResponse<>(false, status.value(), exception.getMessage(), data);
+        return ResponseEntity.status(status).body(response);
+    }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiResponse<Void>> handleResponseStatusException(ResponseStatusException exception) {
