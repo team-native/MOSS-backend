@@ -1,12 +1,15 @@
 package com.teamnative.moss.domain.auth.controller;
 
 import com.teamnative.moss.domain.auth.dto.BusinessSignupRequest;
+import com.teamnative.moss.domain.auth.dto.FindIdRequest;
+import com.teamnative.moss.domain.auth.dto.FindIdResponse;
 import com.teamnative.moss.domain.auth.dto.LoginRequest;
 import com.teamnative.moss.domain.auth.dto.LoginResponse;
 import com.teamnative.moss.domain.auth.dto.RefreshTokenRequest;
 import com.teamnative.moss.domain.auth.dto.SignupResponse;
 import com.teamnative.moss.domain.auth.dto.StudentSignupRequest;
 import com.teamnative.moss.domain.auth.service.BusinessSignupService;
+import com.teamnative.moss.domain.auth.service.FindIdService;
 import com.teamnative.moss.domain.auth.service.LoginService;
 import com.teamnative.moss.domain.auth.service.StudentSignupService;
 import com.teamnative.moss.global.dto.ApiResponse;
@@ -27,15 +30,18 @@ public class AuthController {
     private final StudentSignupService studentSignupService;
     private final BusinessSignupService businessSignupService;
     private final LoginService loginService;
+    private final FindIdService findIdService;
 
     public AuthController(
             StudentSignupService studentSignupService,
             BusinessSignupService businessSignupService,
-            LoginService loginService
+            LoginService loginService,
+            FindIdService findIdService
     ) {
         this.studentSignupService = studentSignupService;
         this.businessSignupService = businessSignupService;
         this.loginService = loginService;
+        this.findIdService = findIdService;
     }
 
     @PostMapping("/signup/business")
@@ -64,5 +70,11 @@ public class AuthController {
     @Operation(summary = "토큰 갱신", description = "유효한 refresh token으로 인증 토큰을 갱신합니다.")
     public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ApiResponse.success("토큰이 갱신되었습니다.", loginService.refresh(request));
+    }
+
+    @PostMapping("/find-id")
+    @Operation(summary = "아이디 찾기", description = "이름과 전화번호로 가입된 이메일과 계정 생성일을 조회합니다.")
+    public ApiResponse<FindIdResponse> findId(@Valid @RequestBody FindIdRequest request) {
+        return ApiResponse.success("계정 정보를 찾았습니다.", findIdService.findId(request));
     }
 }
