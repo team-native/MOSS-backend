@@ -88,7 +88,7 @@ public class AuthController {
     }
 
     @PostMapping("/send-email")
-    @Operation(summary = "이메일 인증번호 발송", description = "입력한 이메일 주소로 5분간 유효한 인증번호를 발송합니다.")
+    @Operation(summary = "이메일 인증번호 발송", description = "입력한 이메일 주소로 2분간 유효한 인증번호를 발송합니다.")
     public ApiResponse<Void> sendEmail(@Valid @RequestBody SendEmailRequest request) {
         emailVerificationService.sendVerificationCode(request);
         return ApiResponse.success("인증번호를 이메일로 발송했습니다.", null);
