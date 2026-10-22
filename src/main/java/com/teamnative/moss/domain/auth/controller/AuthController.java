@@ -1,34 +1,41 @@
 package com.teamnative.moss.domain.auth.controller;
 
+import com.teamnative.moss.domain.auth.dto.BusinessSignupRequest;
 import com.teamnative.moss.domain.auth.dto.LoginRequest;
 import com.teamnative.moss.domain.auth.dto.LoginResponse;
+import com.teamnative.moss.domain.auth.dto.RefreshTokenRequest;
 import com.teamnative.moss.domain.auth.dto.SignupResponse;
 import com.teamnative.moss.domain.auth.dto.StudentSignupRequest;
-import com.teamnative.moss.domain.auth.dto.BusinessSignupRequest;
 import com.teamnative.moss.domain.auth.service.BusinessSignupService;
+import com.teamnative.moss.domain.auth.service.LoginService;
 import com.teamnative.moss.domain.auth.service.StudentSignupService;
 import com.teamnative.moss.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/auth")
 @Tag(name = "Auth", description = "인증 관련 API")
 public class AuthController {
-
     private final StudentSignupService studentSignupService;
     private final BusinessSignupService businessSignupService;
+    private final LoginService loginService;
 
-    public AuthController(StudentSignupService studentSignupService, BusinessSignupService businessSignupService) {
+    public AuthController(
+            StudentSignupService studentSignupService,
+            BusinessSignupService businessSignupService,
+            LoginService loginService
+    ) {
         this.studentSignupService = studentSignupService;
         this.businessSignupService = businessSignupService;
+        this.loginService = loginService;
     }
 
     @PostMapping("/signup/business")
@@ -48,13 +55,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "로그인", description = "아이디/비밀번호로 로그인하여 액세스 토큰을 발급받습니다.")
+    @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인하고 인증 토큰을 발급합니다.")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = new LoginResponse(
-                "replace-with-jwt-token",
-                "Bearer",
-                request.username()
-        );
-        return ApiResponse.success("로그인에 성공했습니다.", response);
+        return ApiResponse.success("로그인에 성공했습니다.", loginService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "토큰 갱신", description = "유효한 refresh token으로 인증 토큰을 갱신합니다.")
+    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ApiResponse.success("토큰이 갱신되었습니다.", loginService.refresh(request));
     }
 }

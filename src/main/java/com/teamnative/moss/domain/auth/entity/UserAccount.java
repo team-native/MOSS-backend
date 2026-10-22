@@ -37,6 +37,12 @@ public class UserAccount {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts;
+
+    @Column(name = "login_locked_until")
+    private LocalDateTime loginLockedUntil;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = true, length = 20)
     private Grade grade;
@@ -62,6 +68,7 @@ public class UserAccount {
         this.passwordHash = passwordHash;
         this.grade = grade;
         this.createdAt = LocalDateTime.now();
+        this.failedLoginAttempts = 0;
     }
 
     public Long getId() {
@@ -76,7 +83,39 @@ public class UserAccount {
         return email;
     }
 
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public boolean isLoginLockedAt(LocalDateTime now) {
+        return loginLockedUntil != null && loginLockedUntil.isAfter(now);
+    }
+
+    public boolean clearExpiredLoginLock(LocalDateTime now) {
+        if (loginLockedUntil == null || loginLockedUntil.isAfter(now)) {
+            return false;
+        }
+        resetFailedLogins();
+        return true;
+    }
+
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public void recordFailedLogin(LocalDateTime now, int maxAttempts, long lockMinutes) {
+        failedLoginAttempts++;
+        if (failedLoginAttempts >= maxAttempts) {
+            loginLockedUntil = now.plusMinutes(lockMinutes);
+        }
+    }
+
+    public void resetFailedLogins() {
+        failedLoginAttempts = 0;
+        loginLockedUntil = null;
     }
 }
