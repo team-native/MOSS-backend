@@ -18,7 +18,7 @@ class SecurityConfigTest {
 
     @Test
     void publicEndpointIsPermitted() throws Exception {
-        mockMvc.perform(get("/api/v1/public/ping"))
+        mockMvc.perform(get("/health"))
                 .andExpect(status().isOk());
     }
 

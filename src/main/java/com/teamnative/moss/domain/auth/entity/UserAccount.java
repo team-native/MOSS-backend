@@ -76,6 +76,10 @@ public class UserAccount {
         return email;
     }
 
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
