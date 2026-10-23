@@ -16,6 +16,7 @@ import com.teamnative.moss.domain.auth.service.BusinessSignupService;
 import com.teamnative.moss.domain.auth.service.FindIdService;
 import com.teamnative.moss.domain.auth.service.EmailVerificationService;
 import com.teamnative.moss.domain.auth.service.LoginService;
+import com.teamnative.moss.domain.auth.service.LogoutService;
 import com.teamnative.moss.domain.auth.service.StudentSignupService;
 import com.teamnative.moss.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,19 +40,22 @@ public class AuthController {
     private final LoginService loginService;
     private final FindIdService findIdService;
     private final EmailVerificationService emailVerificationService;
+    private final LogoutService logoutService;
 
     public AuthController(
             StudentSignupService studentSignupService,
             BusinessSignupService businessSignupService,
             LoginService loginService,
             FindIdService findIdService,
-            EmailVerificationService emailVerificationService
+            EmailVerificationService emailVerificationService,
+            LogoutService logoutService
     ) {
         this.studentSignupService = studentSignupService;
         this.businessSignupService = businessSignupService;
         this.loginService = loginService;
         this.findIdService = findIdService;
         this.emailVerificationService = emailVerificationService;
+        this.logoutService = logoutService;
     }
 
     @PostMapping("/signup/business")
@@ -79,6 +84,14 @@ public class AuthController {
     @Operation(summary = "토큰 갱신", description = "유효한 refresh token으로 인증 토큰을 갱신합니다.")
     public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ApiResponse.success("토큰이 갱신되었습니다.", loginService.refresh(request));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "access token으로 현재 기기 세션을 종료합니다.")
+    public ApiResponse<Void> logout(@RequestHeader("Authorization") String authorization) {
+        String accessToken = authorization.substring("Bearer ".length());
+        logoutService.logout(accessToken);
+        return ApiResponse.success("로그아웃되었습니다.", null);
     }
 
     @PostMapping("/find-id")

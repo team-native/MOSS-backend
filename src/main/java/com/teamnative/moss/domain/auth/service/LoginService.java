@@ -4,7 +4,11 @@ import com.teamnative.moss.domain.auth.dto.LoginRequest;
 import com.teamnative.moss.domain.auth.dto.LoginResponse;
 import com.teamnative.moss.domain.auth.dto.RefreshTokenRequest;
 import com.teamnative.moss.domain.auth.entity.UserAccount;
+import com.teamnative.moss.domain.auth.entity.AuthSession;
+import com.teamnative.moss.domain.auth.repository.AuthSessionRepository;
 import com.teamnative.moss.domain.auth.repository.UserRepository;
+import java.time.Instant;
+import java.util.UUID;
 import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,11 +25,14 @@ public class LoginService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
+    private final AuthSessionRepository authSessionRepository;
 
-    public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder, TokenService tokenService) {
+    public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder, TokenService tokenService,
+                        AuthSessionRepository authSessionRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
+        this.authSessionRepository = authSessionRepository;
     }
 
     @Transactional(noRollbackFor = {ResponseStatusException.class, LoginFailureException.class})
@@ -50,7 +57,7 @@ public class LoginService {
 
         user.resetFailedLogins();
         userRepository.save(user);
-        return createLoginResponse(user);
+        return createLoginResponse(user, UUID.randomUUID().toString(), true);
     }
 
     public LoginResponse refresh(RefreshTokenRequest request) {
@@ -64,13 +71,25 @@ public class LoginService {
                 .filter(account -> account.getEmail().equals(claims.email()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                         "리프레시 토큰이 유효하지 않거나 만료되었습니다."));
-        return createLoginResponse(user);
+        return createLoginResponse(user, claims.sessionId(), false);
     }
 
-    private LoginResponse createLoginResponse(UserAccount user) {
+    private LoginResponse createLoginResponse(UserAccount user, String sessionId, boolean createSession) {
+        String accessToken = tokenService.createAccessToken(user, sessionId);
+        String refreshToken = tokenService.createRefreshToken(user, sessionId);
+        Instant refreshExpiresAt = tokenService.getExpiration(refreshToken);
+        if (createSession) {
+            authSessionRepository.save(new AuthSession(sessionId, user.getId(), refreshExpiresAt));
+        } else {
+            AuthSession session = authSessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                            "로그인 세션이 유효하지 않습니다."));
+            session.extendUntil(refreshExpiresAt);
+            authSessionRepository.save(session);
+        }
         return new LoginResponse(
                 user.getId(), user.getName(), user.getEmail(),
-                tokenService.createAccessToken(user), tokenService.createRefreshToken(user), "Bearer");
+                accessToken, refreshToken, "Bearer");
     }
 
     private LoginFailureException invalidCredentials(int failedAttempts) {

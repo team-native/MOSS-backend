@@ -1,6 +1,8 @@
 package com.teamnative.moss.domain.auth.service;
 
 import com.teamnative.moss.domain.auth.entity.UserAccount;
+import com.teamnative.moss.domain.auth.entity.AuthSession;
+import com.teamnative.moss.domain.auth.repository.AuthSessionRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
@@ -17,6 +19,7 @@ public class TokenService {
     private static final Base64.Encoder BASE64_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
     private final byte[] secret;
     private final ObjectMapper objectMapper;
+    private final AuthSessionRepository authSessionRepository;
     private final long accessTokenExpirationSeconds;
     private final long refreshTokenExpirationSeconds;
 
@@ -24,7 +27,8 @@ public class TokenService {
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration-seconds:900}") long accessTokenExpirationSeconds,
             @Value("${jwt.refresh-token-expiration-seconds:1209600}") long refreshTokenExpirationSeconds,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            AuthSessionRepository authSessionRepository
     ) {
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
         if (this.secret.length < 32) {
@@ -33,14 +37,15 @@ public class TokenService {
         this.accessTokenExpirationSeconds = accessTokenExpirationSeconds;
         this.refreshTokenExpirationSeconds = refreshTokenExpirationSeconds;
         this.objectMapper = objectMapper;
+        this.authSessionRepository = authSessionRepository;
     }
 
-    public String createAccessToken(UserAccount user) {
-        return createToken(user, "access", accessTokenExpirationSeconds);
+    public String createAccessToken(UserAccount user, String sessionId) {
+        return createToken(user, sessionId, "access", accessTokenExpirationSeconds);
     }
 
-    public String createRefreshToken(UserAccount user) {
-        return createToken(user, "refresh", refreshTokenExpirationSeconds);
+    public String createRefreshToken(UserAccount user, String sessionId) {
+        return createToken(user, sessionId, "refresh", refreshTokenExpirationSeconds);
     }
 
     public TokenClaims validateAccessToken(String token) {
@@ -75,7 +80,15 @@ public class TokenService {
                     || email.isBlank() || userId <= 0) {
                 throw new IllegalArgumentException("Expired or invalid token.");
             }
-            return new TokenClaims(userId, email);
+            String sessionId = payload.get("sid").asText();
+            AuthSession session = authSessionRepository.findById(sessionId)
+                    .filter(authSession -> authSession.isActiveAt(Instant.now()))
+                    .filter(authSession -> authSession.getUserId() == userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Session has been revoked or expired."));
+            if (sessionId.isBlank()) {
+                throw new IllegalArgumentException("Invalid session.");
+            }
+            return new TokenClaims(userId, email, sessionId);
         } catch (IllegalArgumentException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -83,14 +96,24 @@ public class TokenService {
         }
     }
 
-    public record TokenClaims(long userId, String email) {
+    public record TokenClaims(long userId, String email, String sessionId) {
     }
 
-    private String createToken(UserAccount user, String tokenType, long expirationSeconds) {
+    public Instant getExpiration(String token) {
+        try {
+            String[] parts = token.split("\\.", -1);
+            JsonNode payload = objectMapper.readTree(Base64.getUrlDecoder().decode(parts[1]));
+            return Instant.ofEpochSecond(payload.get("exp").asLong());
+        } catch (Exception exception) {
+            throw new IllegalArgumentException("Invalid token.", exception);
+        }
+    }
+
+    private String createToken(UserAccount user, String sessionId, String tokenType, long expirationSeconds) {
         long issuedAt = Instant.now().getEpochSecond();
         String header = encode("{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
         String payload = encode("{\"sub\":\"" + escapeJson(user.getEmail()) + "\",\"userId\":"
-                + user.getId() + ",\"type\":\"" + tokenType + "\",\"iat\":" + issuedAt
+                + user.getId() + ",\"sid\":\"" + escapeJson(sessionId) + "\",\"type\":\"" + tokenType + "\",\"iat\":" + issuedAt
                 + ",\"exp\":" + (issuedAt + expirationSeconds) + "}");
         String unsignedToken = header + "." + payload;
         return unsignedToken + "." + BASE64_URL_ENCODER.encodeToString(sign(unsignedToken));

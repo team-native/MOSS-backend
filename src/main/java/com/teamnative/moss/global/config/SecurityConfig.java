@@ -69,11 +69,12 @@ public class SecurityConfig {
                                 "/",
                                 "/health",
                                 "/actuator/health",
-                                "/auth/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        .requestMatchers("/auth/logout").authenticated()
+                        .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptions -> exceptions
