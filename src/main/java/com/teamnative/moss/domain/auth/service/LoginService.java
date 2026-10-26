@@ -18,6 +18,23 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class LoginService {
+    public static class LoginFailureException extends RuntimeException {
+        private final HttpStatus status;
+        private final Integer failedAttempts;
+        private final Integer maxAttempts;
+
+        public LoginFailureException(HttpStatus status, String message, Integer failedAttempts, Integer maxAttempts) {
+            super(message);
+            this.status = status;
+            this.failedAttempts = failedAttempts;
+            this.maxAttempts = maxAttempts;
+        }
+
+        public HttpStatus getStatus() { return status; }
+        public Integer getFailedAttempts() { return failedAttempts; }
+        public Integer getMaxAttempts() { return maxAttempts; }
+    }
+
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCK_MINUTES = 5;
     private static final String INVALID_CREDENTIALS_MESSAGE = "이메일 또는 비밀번호가 일치하지 않습니다.";
