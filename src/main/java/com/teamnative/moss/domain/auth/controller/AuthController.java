@@ -13,6 +13,8 @@ import com.teamnative.moss.domain.auth.dto.VerifyEmailRequest;
 import com.teamnative.moss.domain.auth.dto.VerifyEmailResponse;
 import com.teamnative.moss.domain.auth.dto.StudentSignupRequest;
 import com.teamnative.moss.domain.auth.dto.ProfileResponse;
+import com.teamnative.moss.domain.auth.dto.ProfileUpdateResponse;
+import com.teamnative.moss.domain.auth.dto.UpdateProfileRequest;
 import com.teamnative.moss.domain.auth.service.BusinessSignupService;
 import com.teamnative.moss.domain.auth.service.FindIdService;
 import com.teamnative.moss.domain.auth.service.EmailVerificationService;
@@ -29,6 +31,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -116,6 +119,14 @@ public class AuthController {
     public ApiResponse<ProfileResponse> profile(
             @org.springframework.security.core.annotation.AuthenticationPrincipal String email) {
         return ApiResponse.success("프로필을 조회했습니다.", profileService.getProfile(email));
+    }
+
+    @PatchMapping("/profile")
+    @Operation(summary = "회원 정보 수정", description = "인증된 사용자의 이름, 이메일, 전화번호 또는 비밀번호를 수정합니다.")
+    public ApiResponse<ProfileUpdateResponse> updateProfile(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String email,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        return ApiResponse.success("회원 정보가 수정되었습니다.", profileService.updateProfile(email, request));
     }
 
     @PostMapping("/find-id")

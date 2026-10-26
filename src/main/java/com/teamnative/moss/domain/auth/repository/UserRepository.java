@@ -12,7 +12,11 @@ import java.time.LocalDateTime;
 public interface UserRepository extends JpaRepository<UserAccount, Long> {
     boolean existsByEmail(String email);
 
+    boolean existsByEmailAndIdNot(String email, Long id);
+
     boolean existsByNumber(String number);
+
+    boolean existsByNumberAndIdNot(String number, Long id);
 
     Optional<UserAccount> findByEmail(String email);
 
