@@ -73,7 +73,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
-                        .requestMatchers("/auth/logout", "/auth/delete-account").authenticated()
+                        .requestMatchers("/auth/logout", "/auth/delete-account", "/auth/profile").authenticated()
                         .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )

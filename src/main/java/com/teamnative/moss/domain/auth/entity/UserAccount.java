@@ -86,6 +86,14 @@ public class UserAccount {
         return email;
     }
 
+    public Role getRole() {
+        return role;
+    }
+
+    public Grade getGrade() {
+        return grade;
+    }
+
     public String getPasswordHash() {
         return passwordHash;
     }
@@ -98,15 +106,21 @@ public class UserAccount {
         return createdAt;
     }
 
-    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
 
-    public boolean isPendingDeletion() { return deletedAt != null; }
+    public boolean isPendingDeletion() {
+        return deletedAt != null;
+    }
 
     public void requestDeletion(LocalDateTime now) {
         if (deletedAt == null) deletedAt = now;
     }
 
-    public void restore() { deletedAt = null; }
+    public void restore() {
+        deletedAt = null;
+    }
 
     public boolean isLoginLockedAt(LocalDateTime now) {
         return loginLockedUntil != null && loginLockedUntil.isAfter(now);

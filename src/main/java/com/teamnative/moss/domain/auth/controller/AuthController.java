@@ -12,6 +12,7 @@ import com.teamnative.moss.domain.auth.dto.SendEmailRequest;
 import com.teamnative.moss.domain.auth.dto.VerifyEmailRequest;
 import com.teamnative.moss.domain.auth.dto.VerifyEmailResponse;
 import com.teamnative.moss.domain.auth.dto.StudentSignupRequest;
+import com.teamnative.moss.domain.auth.dto.ProfileResponse;
 import com.teamnative.moss.domain.auth.service.BusinessSignupService;
 import com.teamnative.moss.domain.auth.service.FindIdService;
 import com.teamnative.moss.domain.auth.service.EmailVerificationService;
@@ -19,6 +20,7 @@ import com.teamnative.moss.domain.auth.service.LoginService;
 import com.teamnative.moss.domain.auth.service.LogoutService;
 import com.teamnative.moss.domain.auth.service.StudentSignupService;
 import com.teamnative.moss.domain.auth.service.AccountDeleteService;
+import com.teamnative.moss.domain.auth.service.ProfileService;
 import com.teamnative.moss.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,6 +28,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,6 +46,7 @@ public class AuthController {
     private final EmailVerificationService emailVerificationService;
     private final LogoutService logoutService;
     private final AccountDeleteService accountDeleteService;
+    private final ProfileService profileService;
 
     public AuthController(
             StudentSignupService studentSignupService,
@@ -51,7 +55,8 @@ public class AuthController {
             FindIdService findIdService,
             EmailVerificationService emailVerificationService,
             LogoutService logoutService,
-            AccountDeleteService accountDeleteService
+            AccountDeleteService accountDeleteService,
+            ProfileService profileService
     ) {
         this.studentSignupService = studentSignupService;
         this.businessSignupService = businessSignupService;
@@ -60,6 +65,7 @@ public class AuthController {
         this.emailVerificationService = emailVerificationService;
         this.logoutService = logoutService;
         this.accountDeleteService = accountDeleteService;
+        this.profileService = profileService;
     }
 
     @PostMapping("/signup/business")
@@ -103,6 +109,13 @@ public class AuthController {
     public ApiResponse<Void> deleteAccount(@org.springframework.security.core.annotation.AuthenticationPrincipal String email) {
         accountDeleteService.requestDeletion(email);
         return ApiResponse.success("탈퇴 요청이 접수되었습니다.", null);
+    }
+
+    @GetMapping("/profile")
+    @Operation(summary = "학생 프로필 조회", description = "인증된 학생 회원의 이름, 이메일, 학년을 조회합니다.")
+    public ApiResponse<ProfileResponse> profile(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String email) {
+        return ApiResponse.success("프로필을 조회했습니다.", profileService.getProfile(email));
     }
 
     @PostMapping("/find-id")
