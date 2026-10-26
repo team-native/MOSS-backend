@@ -18,6 +18,7 @@ import com.teamnative.moss.domain.auth.service.EmailVerificationService;
 import com.teamnative.moss.domain.auth.service.LoginService;
 import com.teamnative.moss.domain.auth.service.LogoutService;
 import com.teamnative.moss.domain.auth.service.StudentSignupService;
+import com.teamnative.moss.domain.auth.service.AccountDeleteService;
 import com.teamnative.moss.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,6 +42,7 @@ public class AuthController {
     private final FindIdService findIdService;
     private final EmailVerificationService emailVerificationService;
     private final LogoutService logoutService;
+    private final AccountDeleteService accountDeleteService;
 
     public AuthController(
             StudentSignupService studentSignupService,
@@ -48,7 +50,8 @@ public class AuthController {
             LoginService loginService,
             FindIdService findIdService,
             EmailVerificationService emailVerificationService,
-            LogoutService logoutService
+            LogoutService logoutService,
+            AccountDeleteService accountDeleteService
     ) {
         this.studentSignupService = studentSignupService;
         this.businessSignupService = businessSignupService;
@@ -56,6 +59,7 @@ public class AuthController {
         this.findIdService = findIdService;
         this.emailVerificationService = emailVerificationService;
         this.logoutService = logoutService;
+        this.accountDeleteService = accountDeleteService;
     }
 
     @PostMapping("/signup/business")
@@ -92,6 +96,13 @@ public class AuthController {
         String accessToken = authorization.substring("Bearer ".length());
         logoutService.logout(accessToken);
         return ApiResponse.success("로그아웃되었습니다.", null);
+    }
+
+    @PostMapping("/delete-account")
+    @Operation(summary = "회원 탈퇴", description = "탈퇴 요청 후 30일의 유예 기간이 지나면 계정을 삭제합니다.")
+    public ApiResponse<Void> deleteAccount(@org.springframework.security.core.annotation.AuthenticationPrincipal String email) {
+        accountDeleteService.requestDeletion(email);
+        return ApiResponse.success("탈퇴 요청이 접수되었습니다.", null);
     }
 
     @PostMapping("/find-id")

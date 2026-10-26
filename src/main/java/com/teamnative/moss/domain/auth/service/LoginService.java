@@ -55,6 +55,13 @@ public class LoginService {
             throw invalidCredentials(user.getFailedLoginAttempts());
         }
 
+        if (user.isPendingDeletion()) {
+            if (!user.getDeletedAt().plusDays(30).isAfter(now)) {
+                throw invalidCredentials(user.getFailedLoginAttempts());
+            }
+            user.restore();
+        }
+
         user.resetFailedLogins();
         userRepository.save(user);
         return createLoginResponse(user, UUID.randomUUID().toString(), true);

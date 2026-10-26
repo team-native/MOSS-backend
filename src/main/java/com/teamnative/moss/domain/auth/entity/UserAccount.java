@@ -50,6 +50,9 @@ public class UserAccount {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     protected UserAccount() {
     }
 
@@ -94,6 +97,16 @@ public class UserAccount {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+
+    public boolean isPendingDeletion() { return deletedAt != null; }
+
+    public void requestDeletion(LocalDateTime now) {
+        if (deletedAt == null) deletedAt = now;
+    }
+
+    public void restore() { deletedAt = null; }
 
     public boolean isLoginLockedAt(LocalDateTime now) {
         return loginLockedUntil != null && loginLockedUntil.isAfter(now);
