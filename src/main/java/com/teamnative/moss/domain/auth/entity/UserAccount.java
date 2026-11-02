@@ -50,6 +50,9 @@ public class UserAccount {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     protected UserAccount() {
     }
 
@@ -83,6 +86,16 @@ public class UserAccount {
         return email;
     }
 
+    public String getNumber() { return number; }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public Grade getGrade() {
+        return grade;
+    }
+
     public String getPasswordHash() {
         return passwordHash;
     }
@@ -91,8 +104,30 @@ public class UserAccount {
         this.passwordHash = passwordHash;
     }
 
+    public void updateProfile(String name, String email, String number) {
+        if (name != null) this.name = name;
+        if (email != null) this.email = email;
+        if (number != null) this.number = number;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public boolean isPendingDeletion() {
+        return deletedAt != null;
+    }
+
+    public void requestDeletion(LocalDateTime now) {
+        if (deletedAt == null) deletedAt = now;
+    }
+
+    public void restore() {
+        deletedAt = null;
     }
 
     public boolean isLoginLockedAt(LocalDateTime now) {

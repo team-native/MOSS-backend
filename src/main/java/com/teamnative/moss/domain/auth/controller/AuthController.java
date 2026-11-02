@@ -12,11 +12,17 @@ import com.teamnative.moss.domain.auth.dto.SendEmailRequest;
 import com.teamnative.moss.domain.auth.dto.VerifyEmailRequest;
 import com.teamnative.moss.domain.auth.dto.VerifyEmailResponse;
 import com.teamnative.moss.domain.auth.dto.StudentSignupRequest;
+import com.teamnative.moss.domain.auth.dto.ProfileResponse;
+import com.teamnative.moss.domain.auth.dto.ProfileUpdateResponse;
+import com.teamnative.moss.domain.auth.dto.UpdateProfileRequest;
 import com.teamnative.moss.domain.auth.service.BusinessSignupService;
 import com.teamnative.moss.domain.auth.service.FindIdService;
 import com.teamnative.moss.domain.auth.service.EmailVerificationService;
 import com.teamnative.moss.domain.auth.service.LoginService;
+import com.teamnative.moss.domain.auth.service.LogoutService;
 import com.teamnative.moss.domain.auth.service.StudentSignupService;
+import com.teamnative.moss.domain.auth.service.AccountDeleteService;
+import com.teamnative.moss.domain.auth.service.ProfileService;
 import com.teamnative.moss.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,9 +30,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,19 +46,28 @@ public class AuthController {
     private final LoginService loginService;
     private final FindIdService findIdService;
     private final EmailVerificationService emailVerificationService;
+    private final LogoutService logoutService;
+    private final AccountDeleteService accountDeleteService;
+    private final ProfileService profileService;
 
     public AuthController(
             StudentSignupService studentSignupService,
             BusinessSignupService businessSignupService,
             LoginService loginService,
             FindIdService findIdService,
-            EmailVerificationService emailVerificationService
+            EmailVerificationService emailVerificationService,
+            LogoutService logoutService,
+            AccountDeleteService accountDeleteService,
+            ProfileService profileService
     ) {
         this.studentSignupService = studentSignupService;
         this.businessSignupService = businessSignupService;
         this.loginService = loginService;
         this.findIdService = findIdService;
         this.emailVerificationService = emailVerificationService;
+        this.logoutService = logoutService;
+        this.accountDeleteService = accountDeleteService;
+        this.profileService = profileService;
     }
 
     @PostMapping("/signup/business")
@@ -79,6 +96,36 @@ public class AuthController {
     @Operation(summary = "토큰 갱신", description = "유효한 refresh token으로 인증 토큰을 갱신합니다.")
     public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ApiResponse.success("토큰이 갱신되었습니다.", loginService.refresh(request));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "access token으로 현재 기기 세션을 종료합니다.")
+    public ApiResponse<Void> logout(@RequestHeader("Authorization") String authorization) {
+        String accessToken = authorization.substring("Bearer ".length());
+        logoutService.logout(accessToken);
+        return ApiResponse.success("로그아웃되었습니다.", null);
+    }
+
+    @PostMapping("/delete-account")
+    @Operation(summary = "회원 탈퇴", description = "탈퇴 요청 후 30일의 유예 기간이 지나면 계정을 삭제합니다.")
+    public ApiResponse<Void> deleteAccount(@org.springframework.security.core.annotation.AuthenticationPrincipal String email) {
+        accountDeleteService.requestDeletion(email);
+        return ApiResponse.success("탈퇴 요청이 접수되었습니다.", null);
+    }
+
+    @GetMapping("/profile")
+    @Operation(summary = "학생 프로필 조회", description = "인증된 학생 회원의 이름, 이메일, 학년을 조회합니다.")
+    public ApiResponse<ProfileResponse> profile(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String email) {
+        return ApiResponse.success("프로필을 조회했습니다.", profileService.getProfile(email));
+    }
+
+    @PatchMapping("/profile")
+    @Operation(summary = "회원 정보 수정", description = "인증된 사용자의 이름, 이메일, 전화번호 또는 비밀번호를 수정합니다.")
+    public ApiResponse<ProfileUpdateResponse> updateProfile(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String email,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        return ApiResponse.success("회원 정보가 수정되었습니다.", profileService.updateProfile(email, request));
     }
 
     @PostMapping("/find-id")

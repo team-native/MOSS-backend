@@ -2,7 +2,7 @@ package com.teamnative.moss.global.exception;
 
 import com.teamnative.moss.global.dto.ApiResponse;
 import com.teamnative.moss.domain.auth.dto.LoginFailureData;
-import com.teamnative.moss.domain.auth.service.LoginFailureException;
+import com.teamnative.moss.domain.auth.service.LoginService.LoginFailureException;
 import com.teamnative.moss.global.logging.HttpLoggingFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
