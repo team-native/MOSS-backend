@@ -1,6 +1,7 @@
 package com.teamnative.moss.domain.search.service;
 
 import com.teamnative.moss.domain.search.dto.PlaceSearchResponse;
+import com.teamnative.moss.domain.search.dto.PlaceSearchFilter;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
@@ -10,8 +11,12 @@ public class SearchService {
     private static final Pattern NON_LETTER_OR_DIGIT = Pattern.compile("[^\\p{L}\\p{N}]");
 
     public PlaceSearchResponse searchPlaces(String rawQuery) {
+        return searchPlaces(rawQuery, new PlaceSearchFilter(null, null, null, null, null, null));
+    }
+
+    public PlaceSearchResponse searchPlaces(String rawQuery, PlaceSearchFilter filter) {
         String query = normalize(rawQuery);
-        // Place data/provider will be connected here when the place catalog is introduced.
+        // Apply filter to the place search provider/repository when the place catalog is introduced.
         return new PlaceSearchResponse(query, List.of());
     }
 
