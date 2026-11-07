@@ -31,9 +31,9 @@ public record PlaceSearchFilter(
     }
 
     public enum Facility {
-        MANY_OUTLETS, // 콘센트 많음
+        OUTLETS, // 콘센트 많음
         WIFI, // 와이파이
-        OUTSIDE_FOOD_AND_COOKING, // 외부 음식 취사 가능
+        OUTSIDE_FOOD, // 외부 음식 취사 가능
         STUDY_ROOM, // 스터디룸 보유
         LAPTOP, // 노트북 타이핑 가능
         CALL_ROOM // 통화룸 보유
