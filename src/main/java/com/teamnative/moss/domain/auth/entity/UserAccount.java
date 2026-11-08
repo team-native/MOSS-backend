@@ -104,10 +104,11 @@ public class UserAccount {
         this.passwordHash = passwordHash;
     }
 
-    public void updateProfile(String name, String email, String number) {
+    public void updateProfile(String name, String email, String number, Grade grade) {
         if (name != null) this.name = name;
         if (email != null) this.email = email;
         if (number != null) this.number = number;
+        if (grade != null) this.grade = grade;
     }
 
     public LocalDateTime getCreatedAt() {

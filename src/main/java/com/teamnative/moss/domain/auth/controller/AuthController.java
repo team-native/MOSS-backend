@@ -114,14 +114,14 @@ public class AuthController {
     }
 
     @GetMapping("/profile")
-    @Operation(summary = "학생 프로필 조회", description = "인증된 학생 회원의 이름, 이메일, 학년을 조회합니다.")
+    @Operation(summary = "프로필 조회", description = "인증된 회원의 이름, 이메일, 전화번호, 학년을 조회합니다.")
     public ApiResponse<ProfileResponse> profile(
             @org.springframework.security.core.annotation.AuthenticationPrincipal String email) {
         return ApiResponse.success("프로필을 조회했습니다.", profileService.getProfile(email));
     }
 
     @PatchMapping("/profile")
-    @Operation(summary = "회원 정보 수정", description = "인증된 사용자의 이름, 이메일, 전화번호 또는 비밀번호를 수정합니다.")
+    @Operation(summary = "회원 정보 수정", description = "인증된 사용자의 이름, 전화번호, 학년 또는 비밀번호를 수정합니다. 이메일은 변경할 수 없습니다.")
     public ApiResponse<ProfileUpdateResponse> updateProfile(
             @org.springframework.security.core.annotation.AuthenticationPrincipal String email,
             @Valid @RequestBody UpdateProfileRequest request) {
