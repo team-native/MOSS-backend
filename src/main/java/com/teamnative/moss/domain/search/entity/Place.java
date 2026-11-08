@@ -83,6 +83,9 @@ public class Place {
     @Column(name = "study_room", nullable = false)
     private boolean studyRoom;
 
+    @Column(name = "publicly_visible", nullable = false, columnDefinition = "boolean default true")
+    private boolean publiclyVisible = true;
+
     protected Place() {
     }
 
@@ -121,4 +124,9 @@ public class Place {
     public boolean hasWifi() { return wifi; }
     public boolean isOutsideFoodAllowed() { return outsideFoodAllowed; }
     public boolean hasStudyRoom() { return studyRoom; }
+    public boolean isPubliclyVisible() { return publiclyVisible; }
+
+    public void changeVisibility(boolean publiclyVisible) {
+        this.publiclyVisible = publiclyVisible;
+    }
 }
