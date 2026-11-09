@@ -2,9 +2,11 @@ package com.teamnative.moss.domain.report.controller;
 
 import com.teamnative.moss.domain.report.dto.StudySpotReportRequest;
 import com.teamnative.moss.domain.report.dto.StudySpotReportSubmissionResponse;
+import com.teamnative.moss.domain.report.dto.InfoErrorReportRequest;
 import com.teamnative.moss.domain.report.dto.UserReportResponse;
 import com.teamnative.moss.domain.report.entity.ReportType;
 import com.teamnative.moss.domain.report.service.StudySpotReportService;
+import com.teamnative.moss.domain.report.service.InfoErrorReportService;
 import com.teamnative.moss.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Reports")
 public class ReportController {
     private final StudySpotReportService reportService;
+    private final InfoErrorReportService infoErrorReportService;
 
-    public ReportController(StudySpotReportService reportService) {
+    public ReportController(StudySpotReportService reportService, InfoErrorReportService infoErrorReportService) {
         this.reportService = reportService;
+        this.infoErrorReportService = infoErrorReportService;
     }
 
     @PostMapping("/study-spots")
@@ -42,6 +46,16 @@ public class ReportController {
         }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, "스터디 스팟 제보가 접수되었습니다.", result));
+    }
+
+    @PostMapping("/info-errors")
+    @Operation(summary = "장소 정보 오류 제보", description = "장소의 가격, 연령 제한, 운영 시간, 소음, 시설 등의 오류를 제보합니다.")
+    public ResponseEntity<ApiResponse<UserReportResponse>> submitInfoError(
+            @AuthenticationPrincipal String email,
+            @Valid @RequestBody InfoErrorReportRequest request) {
+        UserReportResponse report = infoErrorReportService.submit(email, request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(HttpStatus.CREATED, "정보 오류 제보가 접수되었습니다.", report));
     }
 
     @GetMapping("/my")

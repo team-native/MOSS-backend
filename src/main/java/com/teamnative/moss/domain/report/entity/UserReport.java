@@ -2,6 +2,7 @@ package com.teamnative.moss.domain.report.entity;
 
 import com.teamnative.moss.domain.auth.entity.UserAccount;
 import com.teamnative.moss.domain.search.entity.PlaceType;
+import com.teamnative.moss.domain.search.entity.Place;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -39,6 +40,10 @@ public class UserReport {
     @JoinColumn(name = "reporter_id", nullable = false)
     private UserAccount reporter;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "place_id")
+    private Place place;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "report_type", nullable = false, length = 20)
     private ReportType reportType;
@@ -69,6 +74,13 @@ public class UserReport {
     @Column(name = "result_reason", length = 500)
     private String resultReason;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "issue_type", length = 30)
+    private InfoIssueType issueType;
+
+    @Column(length = 500)
+    private String content;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -93,6 +105,22 @@ public class UserReport {
         this.updatedAt = now;
     }
 
+    public UserReport(UserAccount reporter, Place place, InfoIssueType issueType, String content,
+                      List<String> photoUrls, LocalDateTime now) {
+        this.reporter = reporter;
+        this.place = place;
+        this.reportType = ReportType.INFO_ERROR;
+        this.status = ReportStatus.RECEIVED;
+        this.placeName = place.getName();
+        this.address = place.getAddress();
+        this.placeType = place.getPlaceType();
+        this.issueType = issueType;
+        this.content = content;
+        this.photoUrls = new ArrayList<>(photoUrls);
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
     public void assignReportNumber(String reportNumber) {
         this.reportNumber = reportNumber;
     }
@@ -110,6 +138,9 @@ public class UserReport {
     public String getPlaceName() { return placeName; }
     public String getAddress() { return address; }
     public PlaceType getPlaceType() { return placeType; }
+    public Place getPlace() { return place; }
+    public InfoIssueType getIssueType() { return issueType; }
+    public String getContent() { return content; }
     public String getRecommendationReason() { return recommendationReason; }
     public List<String> getPhotoUrls() { return List.copyOf(photoUrls); }
     public String getResultReason() { return resultReason; }
