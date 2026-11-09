@@ -9,6 +9,10 @@ import java.util.Optional;
 import java.util.Collection;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 public interface UserReportRepository extends JpaRepository<UserReport, Long> {
     long countByReporter_Id(Long reporterId);
@@ -28,4 +32,14 @@ public interface UserReportRepository extends JpaRepository<UserReport, Long> {
             Long placeId, ReportType reportType, InfoIssueType issueType, Collection<ReportStatus> statuses);
 
     boolean existsByReporter_IdAndReview_Id(Long reporterId, Long reviewId);
+
+    @EntityGraph(attributePaths = "photoUrls")
+    List<UserReport> findByReportTypeOrderByCreatedAtAsc(ReportType reportType);
+
+    @EntityGraph(attributePaths = "photoUrls")
+    List<UserReport> findByReportTypeAndStatusOrderByCreatedAtAsc(ReportType reportType, ReportStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select report from UserReport report where report.id = :id and report.reportType = :type")
+    Optional<UserReport> findByIdAndTypeForUpdate(@Param("id") Long id, @Param("type") ReportType type);
 }
