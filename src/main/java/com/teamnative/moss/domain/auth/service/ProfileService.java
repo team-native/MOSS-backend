@@ -35,7 +35,29 @@ public class ProfileService {
         long reviewCount = placeReviewRepository.countByAuthor_IdAndDeletedAtIsNull(user.getId());
         long reportCount = userReportRepository.countByReporter_Id(user.getId());
         return new ProfileResponse(user.getName(), user.getEmail(), user.getNumber(), user.getGrade(),
-                reviewCount, reportCount);
+                reviewCount, reportCount, user.getSchoolName(), user.getSchoolLatitude(), user.getSchoolLongitude());
+    }
+
+    @Transactional
+    public ProfileResponse setSchool(String email, String schoolName, Double latitude, Double longitude) {
+        var user = userRepository.findByEmailForUpdate(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "계정을 찾을 수 없습니다."));
+        if (user.getRole() != com.teamnative.moss.domain.auth.entity.Role.STUDENT) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학생 회원만 학교를 설정할 수 있습니다.");
+        }
+        user.updateSchool(schoolName.trim(), latitude, longitude);
+        return getProfile(email);
+    }
+
+    @Transactional
+    public ProfileResponse clearSchool(String email) {
+        var user = userRepository.findByEmailForUpdate(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "계정을 찾을 수 없습니다."));
+        if (user.getRole() != com.teamnative.moss.domain.auth.entity.Role.STUDENT) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학생 회원만 학교를 설정할 수 있습니다.");
+        }
+        user.updateSchool(null, null, null);
+        return getProfile(email);
     }
 
     @Transactional

@@ -8,6 +8,9 @@ public record ProfileResponse(
         String number,
         Grade grade,
         long reviewCount,
-        long reportCount
+        long reportCount,
+        String schoolName,
+        Double schoolLatitude,
+        Double schoolLongitude
 ) {
 }

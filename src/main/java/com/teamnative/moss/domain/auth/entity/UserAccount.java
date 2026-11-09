@@ -47,6 +47,15 @@ public class UserAccount {
     @Column(nullable = true, length = 20)
     private Grade grade;
 
+    @Column(name = "school_name", length = 100)
+    private String schoolName;
+
+    @Column(name = "school_latitude")
+    private Double schoolLatitude;
+
+    @Column(name = "school_longitude")
+    private Double schoolLongitude;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -94,6 +103,18 @@ public class UserAccount {
 
     public Grade getGrade() {
         return grade;
+    }
+
+    public String getSchoolName() { return schoolName; }
+
+    public Double getSchoolLatitude() { return schoolLatitude; }
+
+    public Double getSchoolLongitude() { return schoolLongitude; }
+
+    public void updateSchool(String schoolName, Double latitude, Double longitude) {
+        this.schoolName = schoolName;
+        this.schoolLatitude = latitude;
+        this.schoolLongitude = longitude;
     }
 
     public String getPasswordHash() {
