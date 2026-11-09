@@ -32,6 +32,10 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
 
     Optional<PlaceReview> findByAuthor_IdAndPlace_Id(Long authorId, Long placeId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select review from PlaceReview review where review.id = :reviewId")
+    Optional<PlaceReview> findByIdForReport(@Param("reviewId") Long reviewId);
+
     @EntityGraph(attributePaths = {"place", "photoUrls"})
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select review from PlaceReview review where review.id = :reviewId and review.author.id = :authorId")

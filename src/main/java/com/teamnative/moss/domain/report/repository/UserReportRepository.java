@@ -24,4 +24,6 @@ public interface UserReportRepository extends JpaRepository<UserReport, Long> {
 
     boolean existsByPlace_IdAndReportTypeAndIssueTypeAndStatusIn(
             Long placeId, ReportType reportType, InfoIssueType issueType, Collection<ReportStatus> statuses);
+
+    boolean existsByReporter_IdAndReview_Id(Long reporterId, Long reviewId);
 }

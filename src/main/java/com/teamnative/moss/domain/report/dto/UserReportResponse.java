@@ -14,7 +14,9 @@ public record UserReportResponse(
         String placeType,
         String recommendationReason,
         String placeId,
+        String reviewId,
         String issueType,
+        String reviewReportReason,
         String content,
         List<String> photoUrls,
         String resultReason,
@@ -30,7 +32,9 @@ public record UserReportResponse(
                 report.getStatus().name(), report.getPlaceName(), report.getAddress(),
                 report.getPlaceType() == null ? null : report.getPlaceType().name(),
                 report.getRecommendationReason(), report.getPlace() == null ? null : report.getPlace().getId().toString(),
-                report.getIssueType() == null ? null : report.getIssueType().name(), report.getContent(),
+                report.getReview() == null ? null : report.getReview().getId().toString(),
+                report.getIssueType() == null ? null : report.getIssueType().name(),
+                report.getReviewReportReason() == null ? null : report.getReviewReportReason().name(), report.getContent(),
                 report.getPhotoUrls(), report.getResultReason(),
                 report.getCreatedAt(), report.getUpdatedAt());
     }
