@@ -54,6 +54,10 @@ public record PlaceSearchFilter(
         WIFI, // 와이파이
         OUTSIDE_FOOD, // 외부 음식 취사 가능
         STUDY_ROOM, // 스터디룸 보유
+        PRINTER,
+        LOCKER,
+        PARKING,
+        BEVERAGES,
         LAPTOP, // 노트북 타이핑 가능
         CALL_ROOM // 통화룸 보유
     }

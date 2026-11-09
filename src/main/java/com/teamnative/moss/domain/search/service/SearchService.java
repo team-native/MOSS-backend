@@ -53,6 +53,10 @@ public class SearchService {
         if (facilities.contains(PlaceSearchFilter.Facility.WIFI) && !place.hasWifi()) return false;
         if (facilities.contains(PlaceSearchFilter.Facility.OUTSIDE_FOOD) && !place.isOutsideFoodAllowed()) return false;
         if (facilities.contains(PlaceSearchFilter.Facility.STUDY_ROOM) && !place.hasStudyRoom()) return false;
+        if (facilities.contains(PlaceSearchFilter.Facility.PRINTER) && !place.hasPrinter()) return false;
+        if (facilities.contains(PlaceSearchFilter.Facility.LOCKER) && !place.hasLocker()) return false;
+        if (facilities.contains(PlaceSearchFilter.Facility.PARKING) && !place.hasParking()) return false;
+        if (facilities.contains(PlaceSearchFilter.Facility.BEVERAGES) && !place.providesBeverages()) return false;
         if (filter.distance() != null && distanceMeters(place.getLatitude(), place.getLongitude(),
                 filter.latitude(), filter.longitude()) > filter.distance()) return false;
         return true;

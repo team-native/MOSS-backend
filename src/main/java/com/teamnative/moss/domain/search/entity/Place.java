@@ -2,7 +2,11 @@ package com.teamnative.moss.domain.search.entity;
 
 import com.teamnative.moss.domain.search.dto.PlaceSearchFilter;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -10,6 +14,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -64,6 +69,21 @@ public class Place {
     @Column(name = "operating_hours", columnDefinition = "text")
     private String operatingHours;
 
+    @Column(name = "contact_number", length = 30)
+    private String contactNumber;
+
+    @Column(columnDefinition = "text")
+    private String description;
+
+    @Column(columnDefinition = "text")
+    private String holidays;
+
+    @ElementCollection
+    @CollectionTable(name = "place_preferred_age_groups", joinColumns = @JoinColumn(name = "place_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "age_group", nullable = false, length = 20)
+    private Set<PreferredAgeGroup> preferredAgeGroups = new HashSet<>();
+
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "noise_level", nullable = false, length = 20)
@@ -94,6 +114,18 @@ public class Place {
 
     @Column(name = "study_room", nullable = false)
     private boolean studyRoom;
+
+    @Column(nullable = false)
+    private boolean printer;
+
+    @Column(nullable = false)
+    private boolean locker;
+
+    @Column(nullable = false)
+    private boolean parking;
+
+    @Column(nullable = false)
+    private boolean beverages;
 
     @Column(name = "publicly_visible", nullable = false, columnDefinition = "boolean default true")
     private boolean publiclyVisible = true;
@@ -145,6 +177,10 @@ public class Place {
     public int getHourlyPrice() { return hourlyPrice; }
     public int getMaxHourlyPrice() { return maxHourlyPrice == null ? hourlyPrice : maxHourlyPrice; }
     public String getOperatingHours() { return operatingHours; }
+    public String getContactNumber() { return contactNumber; }
+    public String getDescription() { return description; }
+    public String getHolidays() { return holidays; }
+    public Set<PreferredAgeGroup> getPreferredAgeGroups() { return Set.copyOf(preferredAgeGroups); }
     public PlaceSearchFilter.NoiseLevel getNoiseLevel() { return noiseLevel; }
     public PlaceSearchFilter.AgeRestriction getAgeRestriction() { return ageRestriction; }
     public boolean isCallAllowed() { return callAllowed; }
@@ -154,6 +190,10 @@ public class Place {
     public boolean hasWifi() { return wifi; }
     public boolean isOutsideFoodAllowed() { return outsideFoodAllowed; }
     public boolean hasStudyRoom() { return studyRoom; }
+    public boolean hasPrinter() { return printer; }
+    public boolean hasLocker() { return locker; }
+    public boolean hasParking() { return parking; }
+    public boolean providesBeverages() { return beverages; }
     public boolean isPubliclyVisible() { return publiclyVisible; }
     public LocalDateTime getInformationUpdatedAt() { return informationUpdatedAt; }
 
@@ -165,5 +205,42 @@ public class Place {
         this.maxHourlyPrice = maxHourlyPrice;
         this.operatingHours = operatingHours;
         this.callRoomOnly = callRoomOnly;
+    }
+
+    public void updateInformation(String name, String address, PlaceType placeType, double latitude,
+                                  double longitude, String contactNumber, String description,
+                                  String operatingHours, String holidays, int hourlyPrice, int maxHourlyPrice,
+                                  PlaceSearchFilter.AgeRestriction ageRestriction,
+                                  Set<PreferredAgeGroup> preferredAgeGroups, PlaceSearchFilter.NoiseLevel noiseLevel,
+                                  boolean outlets, boolean wifi, boolean printer, boolean locker, boolean parking,
+                                  boolean beverages, boolean studyRoom, boolean outsideFoodAllowed,
+                                  boolean callAllowed, boolean callRoomOnly, boolean laptopAllowed) {
+        this.name = name;
+        this.address = address;
+        this.placeType = placeType;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.contactNumber = contactNumber;
+        this.description = description;
+        this.operatingHours = operatingHours;
+        this.holidays = holidays;
+        this.hourlyPrice = hourlyPrice;
+        this.maxHourlyPrice = maxHourlyPrice;
+        this.ageRestriction = ageRestriction;
+        this.preferredAgeGroups.clear();
+        this.preferredAgeGroups.addAll(preferredAgeGroups);
+        this.noiseLevel = noiseLevel;
+        this.outlets = outlets;
+        this.wifi = wifi;
+        this.printer = printer;
+        this.locker = locker;
+        this.parking = parking;
+        this.beverages = beverages;
+        this.studyRoom = studyRoom;
+        this.outsideFoodAllowed = outsideFoodAllowed;
+        this.callAllowed = callAllowed;
+        this.callRoomOnly = callRoomOnly;
+        this.laptopAllowed = laptopAllowed;
+        this.informationUpdatedAt = LocalDateTime.now();
     }
 }

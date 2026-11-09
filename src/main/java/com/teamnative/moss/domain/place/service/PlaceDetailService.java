@@ -66,8 +66,12 @@ public class PlaceDetailService {
 
         return new PlaceDetailResponse(place.getId().toString(), place.getName(), place.getAddress(),
                 place.getPlaceType().name(), place.getLatitude(), place.getLongitude(), place.getOperatingHours(),
-                place.getHourlyPrice(), place.getMaxHourlyPrice(), place.getAgeRestriction().name(), noiseLevel,
-                place.hasOutlets(), place.hasWifi(), callAvailability(place), place.isLaptopAllowed(), averageRating,
+                place.getContactNumber(), place.getDescription(), place.getHolidays(),
+                place.getHourlyPrice(), place.getMaxHourlyPrice(), place.getAgeRestriction().name(),
+                place.getPreferredAgeGroups(), noiseLevel,
+                place.hasOutlets(), place.hasWifi(), place.hasPrinter(), place.hasLocker(), place.hasParking(),
+                place.providesBeverages(), place.hasStudyRoom(), place.isOutsideFoodAllowed(),
+                callAvailability(place), place.isLaptopAllowed(), averageRating,
                 reviewCount, noiseDistribution, distance, favorited, false, place.getInformationUpdatedAt());
     }
 
