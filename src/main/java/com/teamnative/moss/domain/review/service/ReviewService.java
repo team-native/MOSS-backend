@@ -62,7 +62,10 @@ public class ReviewService {
                 counts.getOrDefault(PlaceSearchFilter.NoiseLevel.TALK, 0L));
         List<PlaceReviewListResponse.Review> reviews = result.getContent().stream()
                 .map(review -> new PlaceReviewListResponse.Review(review.getId().toString(), review.getRating(),
-                        review.getNoiseLevel().name(), review.getContent(), review.getPhotoUrls(), review.getCreatedAt()))
+                        review.getNoiseLevel().name(), review.getContent(), review.getPhotoUrls(), review.getCreatedAt(),
+                        review.getBusinessReply() == null ? null : new PlaceReviewListResponse.BusinessReply(
+                                review.getBusinessReply(),
+                                review.getBusinessReplyCreatedAt(), review.getBusinessReplyUpdatedAt())))
                 .toList();
 
         Double average = reviewRepository.findAverageRating(placeId);

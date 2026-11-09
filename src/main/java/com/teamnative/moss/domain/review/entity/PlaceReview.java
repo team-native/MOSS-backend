@@ -74,6 +74,19 @@ public class PlaceReview {
     @Column(name = "restore_until")
     private LocalDateTime restoreUntil;
 
+    @Column(name = "business_reply", length = 500)
+    private String businessReply;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_reply_author_id")
+    private UserAccount businessReplyAuthor;
+
+    @Column(name = "business_reply_created_at")
+    private LocalDateTime businessReplyCreatedAt;
+
+    @Column(name = "business_reply_updated_at")
+    private LocalDateTime businessReplyUpdatedAt;
+
     protected PlaceReview() {
     }
 
@@ -122,6 +135,25 @@ public class PlaceReview {
         this.updatedAt = now;
     }
 
+    public void addBusinessReply(UserAccount author, String content, LocalDateTime now) {
+        this.businessReplyAuthor = author;
+        this.businessReply = content;
+        this.businessReplyCreatedAt = now;
+        this.businessReplyUpdatedAt = now;
+    }
+
+    public void updateBusinessReply(String content, LocalDateTime now) {
+        this.businessReply = content;
+        this.businessReplyUpdatedAt = now;
+    }
+
+    public void deleteBusinessReply() {
+        this.businessReply = null;
+        this.businessReplyAuthor = null;
+        this.businessReplyCreatedAt = null;
+        this.businessReplyUpdatedAt = null;
+    }
+
     public Long getId() { return id; }
     public UserAccount getAuthor() { return author; }
     public Place getPlace() { return place; }
@@ -134,4 +166,8 @@ public class PlaceReview {
     public LocalDateTime getLastEditedAt() { return lastEditedAt; }
     public LocalDateTime getDeletedAt() { return deletedAt; }
     public LocalDateTime getRestoreUntil() { return restoreUntil; }
+    public String getBusinessReply() { return businessReply; }
+    public UserAccount getBusinessReplyAuthor() { return businessReplyAuthor; }
+    public LocalDateTime getBusinessReplyCreatedAt() { return businessReplyCreatedAt; }
+    public LocalDateTime getBusinessReplyUpdatedAt() { return businessReplyUpdatedAt; }
 }

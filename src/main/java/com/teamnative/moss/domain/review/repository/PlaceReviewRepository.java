@@ -25,7 +25,16 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
             + "where review.place.id = :placeId and review.deletedAt is null group by review.noiseLevel")
     List<Object[]> countNoiseLevels(@Param("placeId") Long placeId);
 
+    @EntityGraph(attributePaths = {"place", "businessReplyAuthor"})
     Page<PlaceReview> findByPlace_IdAndDeletedAtIsNullOrderByCreatedAtDesc(Long placeId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"place", "businessReplyAuthor"})
+    Page<PlaceReview> findByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNullOrderByCreatedAtDesc(
+            Long placeId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"place", "businessReplyAuthor"})
+    Page<PlaceReview> findByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNotNullOrderByCreatedAtDesc(
+            Long placeId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"place", "photoUrls"})
     List<PlaceReview> findByAuthor_IdAndDeletedAtIsNullOrderByCreatedAtDesc(Long authorId);
@@ -41,6 +50,10 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
     @Query("select review from PlaceReview review where review.id = :reviewId and review.author.id = :authorId")
     Optional<PlaceReview> findByIdAndAuthorForUpdate(@Param("reviewId") Long reviewId,
                                                      @Param("authorId") Long authorId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select review from PlaceReview review where review.id = :reviewId")
+    Optional<PlaceReview> findByIdForBusinessUpdate(@Param("reviewId") Long reviewId);
 
     List<PlaceReview> findByDeletedAtIsNotNullAndRestoreUntilLessThanEqual(LocalDateTime cutoff);
 }

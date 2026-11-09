@@ -26,10 +26,14 @@ public record PlaceReviewListResponse(
             String noiseLevel,
             String content,
             List<String> photoUrls,
-            LocalDateTime createdAt
+            LocalDateTime createdAt,
+            BusinessReply businessReply
     ) {
         public Review {
             photoUrls = List.copyOf(photoUrls);
         }
     }
+
+    public record BusinessReply(String content, LocalDateTime createdAt,
+                                LocalDateTime updatedAt) {}
 }
