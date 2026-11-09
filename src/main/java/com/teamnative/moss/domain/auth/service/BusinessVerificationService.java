@@ -7,6 +7,8 @@ import com.teamnative.moss.domain.auth.entity.Role;
 import com.teamnative.moss.domain.auth.entity.UserAccount;
 import com.teamnative.moss.domain.auth.repository.BusinessVerificationRepository;
 import com.teamnative.moss.domain.auth.repository.UserRepository;
+import com.teamnative.moss.domain.notification.entity.NotificationType;
+import com.teamnative.moss.domain.notification.service.NotificationService;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,11 +26,14 @@ public class BusinessVerificationService {
 
     private final UserRepository userRepository;
     private final BusinessVerificationRepository verificationRepository;
+    private final NotificationService notificationService;
 
     public BusinessVerificationService(UserRepository userRepository,
-                                       BusinessVerificationRepository verificationRepository) {
+                                       BusinessVerificationRepository verificationRepository,
+                                       NotificationService notificationService) {
         this.userRepository = userRepository;
         this.verificationRepository = verificationRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -114,6 +119,25 @@ public class BusinessVerificationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "선택한 처리 상태는 관리자 결정으로 사용할 수 없습니다.");
         }
         application.updateReview(nextStatus, normalizedReason, LocalDateTime.now());
+        if (nextStatus == BusinessVerificationStatus.APPROVED
+                || nextStatus == BusinessVerificationStatus.NEEDS_SUPPLEMENT
+                || nextStatus == BusinessVerificationStatus.REJECTED) {
+            NotificationType type = switch (nextStatus) {
+                case APPROVED -> NotificationType.BUSINESS_VERIFICATION_APPROVED;
+                case NEEDS_SUPPLEMENT -> NotificationType.BUSINESS_VERIFICATION_NEEDS_SUPPLEMENT;
+                case REJECTED -> NotificationType.BUSINESS_VERIFICATION_REJECTED;
+                default -> throw new IllegalStateException("Unexpected verification status");
+            };
+            String title = switch (nextStatus) {
+                case APPROVED -> "사업자 인증 승인";
+                case NEEDS_SUPPLEMENT -> "사업자 인증 보완 요청";
+                case REJECTED -> "사업자 인증 반려";
+                default -> throw new IllegalStateException("Unexpected verification status");
+            };
+            String message = normalizedReason == null ? title + " 처리되었습니다."
+                    : title + ": " + normalizedReason;
+            notificationService.create(application.getUser(), type, title, message, "/business/verification");
+        }
         return BusinessVerificationResponse.from(application);
     }
 

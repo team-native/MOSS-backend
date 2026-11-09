@@ -159,6 +159,7 @@ public class UserReport {
     }
 
     public Long getId() { return id; }
+    public UserAccount getReporter() { return reporter; }
     public String getReportNumber() { return reportNumber; }
     public ReportType getReportType() { return reportType; }
     public ReportStatus getStatus() { return status; }

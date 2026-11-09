@@ -9,6 +9,8 @@ import com.teamnative.moss.domain.report.entity.ReportStatus;
 import com.teamnative.moss.domain.report.entity.ReportType;
 import com.teamnative.moss.domain.report.entity.UserReport;
 import com.teamnative.moss.domain.report.repository.UserReportRepository;
+import com.teamnative.moss.domain.notification.entity.NotificationType;
+import com.teamnative.moss.domain.notification.service.NotificationService;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -20,10 +22,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class StudySpotReportProcessingService {
     private final UserRepository userRepository;
     private final UserReportRepository reportRepository;
+    private final NotificationService notificationService;
 
-    public StudySpotReportProcessingService(UserRepository userRepository, UserReportRepository reportRepository) {
+    public StudySpotReportProcessingService(UserRepository userRepository, UserReportRepository reportRepository,
+                                            NotificationService notificationService) {
         this.userRepository = userRepository;
         this.reportRepository = reportRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -56,6 +61,12 @@ public class StudySpotReportProcessingService {
         }
 
         report.updateProcessing(next, reason, LocalDateTime.now());
+        if (next == ReportStatus.ACCEPTED || next == ReportStatus.REJECTED) {
+            String title = next == ReportStatus.ACCEPTED ? "장소 제보 처리 완료" : "장소 제보 미반영";
+            String message = reason == null ? title + "되었습니다." : title + ": " + reason;
+            notificationService.create(report.getReporter(), NotificationType.STUDY_SPOT_REPORT_RESULT,
+                    title, message, "/reports/" + report.getId());
+        }
         return UserReportResponse.from(report);
     }
 
