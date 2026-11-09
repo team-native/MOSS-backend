@@ -4,12 +4,15 @@ import com.teamnative.moss.domain.auth.entity.UserAccount;
 import com.teamnative.moss.domain.auth.repository.UserRepository;
 import com.teamnative.moss.domain.favorite.repository.FavoriteRepository;
 import com.teamnative.moss.domain.place.dto.PlaceDetailResponse;
+import com.teamnative.moss.domain.place.dto.PlaceEventResponse;
+import com.teamnative.moss.domain.place.repository.PlaceEventRepository;
 import com.teamnative.moss.domain.review.repository.PlaceReviewRepository;
 import com.teamnative.moss.domain.search.dto.PlaceSearchFilter;
 import com.teamnative.moss.domain.search.entity.Place;
 import com.teamnative.moss.domain.search.repository.PlaceRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.EnumMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -25,13 +28,16 @@ public class PlaceDetailService {
     private final PlaceReviewRepository reviewRepository;
     private final FavoriteRepository favoriteRepository;
     private final UserRepository userRepository;
+    private final PlaceEventRepository eventRepository;
 
     public PlaceDetailService(PlaceRepository placeRepository, PlaceReviewRepository reviewRepository,
-                              FavoriteRepository favoriteRepository, UserRepository userRepository) {
+                              FavoriteRepository favoriteRepository, UserRepository userRepository,
+                              PlaceEventRepository eventRepository) {
         this.placeRepository = placeRepository;
         this.reviewRepository = reviewRepository;
         this.favoriteRepository = favoriteRepository;
         this.userRepository = userRepository;
+        this.eventRepository = eventRepository;
     }
 
     @Transactional(readOnly = true)
@@ -72,7 +78,15 @@ public class PlaceDetailService {
                 place.hasOutlets(), place.hasWifi(), place.hasPrinter(), place.hasLocker(), place.hasParking(),
                 place.providesBeverages(), place.hasStudyRoom(), place.isOutsideFoodAllowed(),
                 callAvailability(place), place.isLaptopAllowed(), averageRating,
-                reviewCount, noiseDistribution, distance, favorited, false, place.getInformationUpdatedAt());
+                reviewCount, getActiveEvents(placeId), noiseDistribution, distance, favorited, false,
+                place.getInformationUpdatedAt());
+    }
+
+    private java.util.List<PlaceEventResponse> getActiveEvents(Long placeId) {
+        LocalDate today = LocalDate.now();
+        return eventRepository.findByPlace_IdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAscIdAsc(
+                        placeId, today, today)
+                .stream().map(PlaceEventResponse::from).toList();
     }
 
     private String majorityNoiseOrDefault(Map<PlaceSearchFilter.NoiseLevel, Long> counts, Place place) {

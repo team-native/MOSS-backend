@@ -26,13 +26,13 @@ public record BusinessDashboardResponse(
 ) {
     public static BusinessDashboardResponse from(Place place, long totalReviews,
             long recentReviewsCount, long previousReviewsCount, long unansweredReviews,
-            long pendingInfoReports, List<UserReport> infoReports,
+            long activeEvents, long pendingInfoReports, List<UserReport> infoReports,
             List<PlaceReview> reviews) {
         return new BusinessDashboardResponse(
                 place.getId(), place.getName(), place.isPubliclyVisible(), place.getInformationUpdatedAt(),
                 totalReviews, recentReviewsCount, previousReviewsCount,
                 recentReviewsCount - previousReviewsCount, unansweredReviews,
-                null, pendingInfoReports,
+                activeEvents, pendingInfoReports,
                 infoReports.stream().map(InfoErrorReport::from).toList(),
                 reviews.stream().map(RecentReview::from).toList());
     }

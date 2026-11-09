@@ -2,6 +2,7 @@ package com.teamnative.moss.domain.place.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 import com.teamnative.moss.domain.search.entity.PreferredAgeGroup;
 
@@ -33,6 +34,7 @@ public record PlaceDetailResponse(
         boolean laptopAllowed,
         BigDecimal averageRating,
         long reviewCount,
+        List<PlaceEventResponse> events,
         NoiseDistribution noiseDistribution,
         Integer distanceMeters,
         boolean favorited,
@@ -41,6 +43,7 @@ public record PlaceDetailResponse(
 ) {
     public PlaceDetailResponse {
         preferredAgeGroups = Set.copyOf(preferredAgeGroups);
+        events = List.copyOf(events);
     }
 
     public record NoiseDistribution(long quiet, long normal, long talk) {}
