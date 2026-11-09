@@ -3,11 +3,14 @@ package com.teamnative.moss.domain.review.controller;
 import com.teamnative.moss.domain.review.service.ReviewService;
 import com.teamnative.moss.domain.review.dto.ReviewRequest;
 import com.teamnative.moss.domain.review.dto.ReviewResponse;
+import com.teamnative.moss.domain.review.dto.PlaceReviewListResponse;
 import com.teamnative.moss.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,7 +22,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.validation.annotation.Validated;
 
+@Validated
 @RestController
 @RequestMapping("/review")
 @Tag(name = "Review")
@@ -34,6 +40,16 @@ public class ReviewController {
     @Operation(summary = "내가 쓴 리뷰 목록 조회", description = "로그인한 학생이 작성한 리뷰 목록을 최신순으로 반환합니다.")
     public ApiResponse<List<ReviewResponse>> myReviews(@AuthenticationPrincipal String email) {
         return ApiResponse.success("작성한 리뷰 목록을 조회했습니다.", reviewService.getMyReviews(email));
+    }
+
+    @GetMapping("/places/{placeId}")
+    @Operation(summary = "장소 리뷰 조회", description = "삭제되지 않은 리뷰를 최신순으로 조회하고 평균 별점과 소음 분포를 반환합니다.")
+    public ApiResponse<PlaceReviewListResponse> placeReviews(
+            @PathVariable Long placeId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+    ) {
+        return ApiResponse.success("장소 리뷰를 조회했습니다.", reviewService.getPlaceReviews(placeId, page, size));
     }
 
     @PostMapping("/places/{placeId}")

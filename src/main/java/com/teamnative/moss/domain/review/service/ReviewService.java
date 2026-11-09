@@ -5,6 +5,7 @@ import com.teamnative.moss.domain.auth.entity.UserAccount;
 import com.teamnative.moss.domain.auth.repository.UserRepository;
 import com.teamnative.moss.domain.review.dto.ReviewRequest;
 import com.teamnative.moss.domain.review.dto.ReviewResponse;
+import com.teamnative.moss.domain.review.dto.PlaceReviewListResponse;
 import com.teamnative.moss.domain.review.entity.PlaceReview;
 import com.teamnative.moss.domain.review.repository.PlaceReviewRepository;
 import com.teamnative.moss.domain.search.entity.Place;
@@ -13,6 +14,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.EnumMap;
+import com.teamnative.moss.domain.search.dto.PlaceSearchFilter;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -37,6 +43,32 @@ public class ReviewService {
         UserAccount user = findStudent(email);
         return reviewRepository.findByAuthor_IdAndDeletedAtIsNullOrderByCreatedAtDesc(user.getId())
                 .stream().map(ReviewResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PlaceReviewListResponse getPlaceReviews(Long placeId, int page, int size) {
+        placeRepository.findById(placeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."));
+
+        Page<PlaceReview> result = reviewRepository.findByPlace_IdAndDeletedAtIsNullOrderByCreatedAtDesc(
+                placeId, PageRequest.of(page, size));
+        Map<PlaceSearchFilter.NoiseLevel, Long> counts = new EnumMap<>(PlaceSearchFilter.NoiseLevel.class);
+        for (Object[] row : reviewRepository.countNoiseLevels(placeId)) {
+            counts.put((PlaceSearchFilter.NoiseLevel) row[0], ((Number) row[1]).longValue());
+        }
+        PlaceReviewListResponse.NoiseDistribution distribution = new PlaceReviewListResponse.NoiseDistribution(
+                counts.getOrDefault(PlaceSearchFilter.NoiseLevel.QUIET, 0L),
+                counts.getOrDefault(PlaceSearchFilter.NoiseLevel.NORMAL, 0L),
+                counts.getOrDefault(PlaceSearchFilter.NoiseLevel.TALK, 0L));
+        List<PlaceReviewListResponse.Review> reviews = result.getContent().stream()
+                .map(review -> new PlaceReviewListResponse.Review(review.getId().toString(), review.getRating(),
+                        review.getNoiseLevel().name(), review.getContent(), review.getPhotoUrls(), review.getCreatedAt()))
+                .toList();
+
+        Double average = reviewRepository.findAverageRating(placeId);
+        return new PlaceReviewListResponse(placeId.toString(), reviewRepository.countByPlace_IdAndDeletedAtIsNull(placeId),
+                average == null ? null : BigDecimal.valueOf(average).setScale(2, java.math.RoundingMode.HALF_UP),
+                distribution, reviews, page, size, result.hasNext());
     }
 
     @Transactional
