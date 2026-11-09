@@ -18,6 +18,11 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
 
     long countByPlace_IdAndDeletedAtIsNull(Long placeId);
 
+    long countByPlace_IdAndDeletedAtIsNullAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+            Long placeId, LocalDateTime from, LocalDateTime to);
+
+    long countByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNull(Long placeId);
+
     @Query("select avg(review.rating) from PlaceReview review where review.place.id = :placeId and review.deletedAt is null")
     Double findAverageRating(@Param("placeId") Long placeId);
 

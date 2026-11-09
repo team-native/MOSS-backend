@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
@@ -38,6 +40,13 @@ public interface UserReportRepository extends JpaRepository<UserReport, Long> {
 
     @EntityGraph(attributePaths = "photoUrls")
     List<UserReport> findByReportTypeAndStatusOrderByCreatedAtAsc(ReportType reportType, ReportStatus status);
+
+    long countByPlace_IdAndReportTypeAndStatusIn(Long placeId, ReportType reportType,
+                                                  Collection<ReportStatus> statuses);
+
+    @EntityGraph(attributePaths = "photoUrls")
+    Page<UserReport> findByPlace_IdAndReportTypeAndStatusInOrderByCreatedAtDesc(
+            Long placeId, ReportType reportType, Collection<ReportStatus> statuses, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select report from UserReport report where report.id = :id and report.reportType = :type")
