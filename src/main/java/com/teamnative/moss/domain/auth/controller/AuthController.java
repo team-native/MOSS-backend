@@ -13,6 +13,7 @@ import com.teamnative.moss.domain.auth.dto.VerifyEmailRequest;
 import com.teamnative.moss.domain.auth.dto.VerifyEmailResponse;
 import com.teamnative.moss.domain.auth.dto.StudentSignupRequest;
 import com.teamnative.moss.domain.auth.dto.ProfileResponse;
+import com.teamnative.moss.domain.auth.dto.SchoolPreferenceRequest;
 import com.teamnative.moss.domain.auth.dto.ProfileUpdateResponse;
 import com.teamnative.moss.domain.auth.dto.UpdateProfileRequest;
 import com.teamnative.moss.domain.auth.service.BusinessSignupService;
@@ -32,6 +33,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -114,18 +117,34 @@ public class AuthController {
     }
 
     @GetMapping("/profile")
-    @Operation(summary = "학생 프로필 조회", description = "인증된 학생 회원의 이름, 이메일, 학년을 조회합니다.")
+    @Operation(summary = "프로필 조회", description = "인증된 회원의 이름, 이메일, 전화번호, 학년을 조회합니다.")
     public ApiResponse<ProfileResponse> profile(
             @org.springframework.security.core.annotation.AuthenticationPrincipal String email) {
         return ApiResponse.success("프로필을 조회했습니다.", profileService.getProfile(email));
     }
 
     @PatchMapping("/profile")
-    @Operation(summary = "회원 정보 수정", description = "인증된 사용자의 이름, 이메일, 전화번호 또는 비밀번호를 수정합니다.")
+    @Operation(summary = "회원 정보 수정", description = "인증된 사용자의 이름, 전화번호, 학년 또는 비밀번호를 수정합니다. 이메일은 변경할 수 없습니다.")
     public ApiResponse<ProfileUpdateResponse> updateProfile(
             @org.springframework.security.core.annotation.AuthenticationPrincipal String email,
             @Valid @RequestBody UpdateProfileRequest request) {
         return ApiResponse.success("회원 정보가 수정되었습니다.", profileService.updateProfile(email, request));
+    }
+
+    @PutMapping("/profile/school")
+    @Operation(summary = "내 학교 설정", description = "학생 프로필에 학교명과 위치를 저장합니다.")
+    public ApiResponse<ProfileResponse> setSchool(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String email,
+            @Valid @RequestBody SchoolPreferenceRequest request) {
+        return ApiResponse.success("학교를 설정했습니다.",
+                profileService.setSchool(email, request.schoolName(), request.latitude(), request.longitude()));
+    }
+
+    @DeleteMapping("/profile/school")
+    @Operation(summary = "내 학교 설정 해제", description = "저장한 학교 정보를 삭제합니다.")
+    public ApiResponse<ProfileResponse> clearSchool(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String email) {
+        return ApiResponse.success("학교 설정을 해제했습니다.", profileService.clearSchool(email));
     }
 
     @PostMapping("/find-id")

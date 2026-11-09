@@ -5,6 +5,7 @@ import com.teamnative.moss.global.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -67,13 +68,16 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/",
+                                "/main/**",
                                 "/health",
                                 "/actuator/health",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
-                        .requestMatchers("/auth/logout", "/auth/delete-account", "/auth/profile/**", "/review/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/review/places/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/places/**").permitAll()
+                        .requestMatchers("/auth/logout", "/auth/delete-account", "/auth/profile/**", "/review/**", "/favorites/**").authenticated()
                         .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )

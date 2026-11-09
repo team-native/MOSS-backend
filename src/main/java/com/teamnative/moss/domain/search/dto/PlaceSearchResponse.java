@@ -7,5 +7,7 @@ public record PlaceSearchResponse(String query, List<Place> places) {
         places = List.copyOf(places);
     }
 
-    public record Place(String id, String name, String address, double latitude, double longitude) {}
+    public record Place(String id, String name, String address, double latitude, double longitude,
+                        int hourlyPrice, String noiseLevel, String ageRestriction,
+                        boolean callAllowed, boolean laptopAllowed, Integer distanceMeters) {}
 }
