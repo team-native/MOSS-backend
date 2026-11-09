@@ -13,6 +13,8 @@ import org.springframework.data.jpa.repository.Query;
 public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     long countByUser_IdAndRemovedAtIsNull(Long userId);
 
+    boolean existsByUser_IdAndPlace_IdAndRemovedAtIsNull(Long userId, Long placeId);
+
     @EntityGraph(attributePaths = "place")
     List<Favorite> findByUser_IdAndRemovedAtIsNull(Long userId);
 

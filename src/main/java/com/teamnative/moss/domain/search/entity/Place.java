@@ -1,6 +1,7 @@
 package com.teamnative.moss.domain.search.entity;
 
 import com.teamnative.moss.domain.search.dto.PlaceSearchFilter;
+import java.time.LocalDateTime;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -9,6 +10,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -55,6 +58,12 @@ public class Place {
     @Column(name = "hourly_price", nullable = false)
     private Integer hourlyPrice;
 
+    @Column(name = "max_hourly_price")
+    private Integer maxHourlyPrice;
+
+    @Column(name = "operating_hours", columnDefinition = "text")
+    private String operatingHours;
+
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "noise_level", nullable = false, length = 20)
@@ -67,6 +76,9 @@ public class Place {
 
     @Column(name = "call_allowed", nullable = false)
     private boolean callAllowed;
+
+    @Column(name = "call_room_only", nullable = false, columnDefinition = "boolean default false")
+    private boolean callRoomOnly;
 
     @Column(name = "laptop_allowed", nullable = false)
     private boolean laptopAllowed;
@@ -86,6 +98,9 @@ public class Place {
     @Column(name = "publicly_visible", nullable = false, columnDefinition = "boolean default true")
     private boolean publiclyVisible = true;
 
+    @Column(name = "information_updated_at", nullable = false, columnDefinition = "datetime default CURRENT_TIMESTAMP")
+    private LocalDateTime informationUpdatedAt;
+
     protected Place() {
     }
 
@@ -99,6 +114,7 @@ public class Place {
         this.latitude = latitude;
         this.longitude = longitude;
         this.hourlyPrice = hourlyPrice;
+        this.maxHourlyPrice = hourlyPrice;
         this.noiseLevel = noiseLevel;
         this.ageRestriction = ageRestriction;
         this.callAllowed = callAllowed;
@@ -107,6 +123,17 @@ public class Place {
         this.wifi = wifi;
         this.outsideFoodAllowed = outsideFoodAllowed;
         this.studyRoom = studyRoom;
+        this.informationUpdatedAt = LocalDateTime.now();
+    }
+
+    @PrePersist
+    protected void setInformationCreatedAt() {
+        if (informationUpdatedAt == null) informationUpdatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void setInformationUpdatedAt() {
+        informationUpdatedAt = LocalDateTime.now();
     }
 
     public Long getId() { return id; }
@@ -116,17 +143,27 @@ public class Place {
     public double getLatitude() { return latitude; }
     public double getLongitude() { return longitude; }
     public int getHourlyPrice() { return hourlyPrice; }
+    public int getMaxHourlyPrice() { return maxHourlyPrice == null ? hourlyPrice : maxHourlyPrice; }
+    public String getOperatingHours() { return operatingHours; }
     public PlaceSearchFilter.NoiseLevel getNoiseLevel() { return noiseLevel; }
     public PlaceSearchFilter.AgeRestriction getAgeRestriction() { return ageRestriction; }
     public boolean isCallAllowed() { return callAllowed; }
+    public boolean isCallRoomOnly() { return callRoomOnly; }
     public boolean isLaptopAllowed() { return laptopAllowed; }
     public boolean hasOutlets() { return outlets; }
     public boolean hasWifi() { return wifi; }
     public boolean isOutsideFoodAllowed() { return outsideFoodAllowed; }
     public boolean hasStudyRoom() { return studyRoom; }
     public boolean isPubliclyVisible() { return publiclyVisible; }
+    public LocalDateTime getInformationUpdatedAt() { return informationUpdatedAt; }
 
     public void changeVisibility(boolean publiclyVisible) {
         this.publiclyVisible = publiclyVisible;
+    }
+
+    public void updateDetailData(Integer maxHourlyPrice, String operatingHours, boolean callRoomOnly) {
+        this.maxHourlyPrice = maxHourlyPrice;
+        this.operatingHours = operatingHours;
+        this.callRoomOnly = callRoomOnly;
     }
 }

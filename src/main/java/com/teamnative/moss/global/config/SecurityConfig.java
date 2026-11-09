@@ -76,6 +76,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/review/places/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/places/**").permitAll()
                         .requestMatchers("/auth/logout", "/auth/delete-account", "/auth/profile/**", "/review/**", "/favorites/**").authenticated()
                         .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated()
