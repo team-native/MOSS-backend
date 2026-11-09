@@ -24,6 +24,10 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     @Query("select place from Place place where place.id = :id")
     Optional<Place> findByIdForInformationUpdate(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select place from Place place where place.id = :id")
+    Optional<Place> findByIdForVisibilityUpdate(@Param("id") Long id);
+
     List<Place> findByPlaceTypeInAndLatitudeBetweenAndLongitudeBetween(
             Collection<PlaceType> placeTypes,
             double minLatitude,

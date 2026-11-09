@@ -29,6 +29,7 @@ public class SearchService {
         String normalizedQuery = query.toLowerCase(java.util.Locale.ROOT);
         List<PlaceSearchResponse.Place> places = placeRepository.findAll()
                 .stream()
+                .filter(Place::isPubliclyVisible)
                 .filter(place -> normalize(place.getName()).toLowerCase(java.util.Locale.ROOT).contains(normalizedQuery))
                 .filter(place -> matches(place, filter))
                 .map(place -> toResponse(place, filter))

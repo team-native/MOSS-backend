@@ -51,6 +51,7 @@ public class MainService {
         }
 
         List<NearbyPlaceResponse.Place> places = candidates.stream()
+                .filter(Place::isPubliclyVisible)
                 .map(place -> toResponse(place, latitude, longitude))
                 .filter(place -> place.distanceMeters() <= radiusMeters)
                 .sorted(Comparator.comparingInt(NearbyPlaceResponse.Place::distanceMeters))
