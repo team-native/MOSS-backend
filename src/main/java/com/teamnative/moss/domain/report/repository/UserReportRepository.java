@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserReportRepository extends JpaRepository<UserReport, Long> {
+    long countByReporter_Id(Long reporterId);
+
     @EntityGraph(attributePaths = "photoUrls")
     List<UserReport> findByReporter_IdOrderByCreatedAtDesc(Long reporterId);
 
