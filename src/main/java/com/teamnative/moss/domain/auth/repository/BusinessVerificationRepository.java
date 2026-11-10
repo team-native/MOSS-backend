@@ -7,12 +7,17 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface BusinessVerificationRepository extends JpaRepository<BusinessVerification, Long> {
     @EntityGraph(attributePaths = "user")
     Optional<BusinessVerification> findByUser_Id(Long userId);
+
+    @Modifying
+    @Query("delete from BusinessVerification verification where verification.user.id = :userId")
+    int deleteByUserId(@Param("userId") Long userId);
 
     List<BusinessVerification> findByStatusOrderBySubmittedAtAsc(BusinessVerificationStatus status);
 

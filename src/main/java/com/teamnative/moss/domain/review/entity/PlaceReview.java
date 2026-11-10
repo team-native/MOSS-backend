@@ -74,6 +74,9 @@ public class PlaceReview {
     @Column(name = "restore_until")
     private LocalDateTime restoreUntil;
 
+    @Column(name = "moderated_at")
+    private LocalDateTime moderatedAt;
+
     @Column(name = "business_reply", length = 500)
     private String businessReply;
 
@@ -105,6 +108,17 @@ public class PlaceReview {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    public boolean isModerated() {
+        return moderatedAt != null;
+    }
+
+    public boolean moderate(LocalDateTime now) {
+        if (moderatedAt != null) return false;
+        moderatedAt = now;
+        updatedAt = now;
+        return true;
     }
 
     public boolean canRestoreAt(LocalDateTime now) {
@@ -166,6 +180,7 @@ public class PlaceReview {
     public LocalDateTime getLastEditedAt() { return lastEditedAt; }
     public LocalDateTime getDeletedAt() { return deletedAt; }
     public LocalDateTime getRestoreUntil() { return restoreUntil; }
+    public LocalDateTime getModeratedAt() { return moderatedAt; }
     public String getBusinessReply() { return businessReply; }
     public UserAccount getBusinessReplyAuthor() { return businessReplyAuthor; }
     public LocalDateTime getBusinessReplyCreatedAt() { return businessReplyCreatedAt; }

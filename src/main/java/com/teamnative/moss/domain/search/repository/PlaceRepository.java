@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
@@ -27,6 +28,18 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select place from Place place where place.id = :id")
     Optional<Place> findByIdForVisibilityUpdate(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select place from Place place where place.id = :id")
+    Optional<Place> findByIdForOwnershipUpdate(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select place from Place place where place.id = :id")
+    Optional<Place> findByIdForEventUpdate(@Param("id") Long id);
+
+    @Modifying
+    @Query("update Place place set place.owner = null where place.owner.id = :ownerId")
+    int clearOwnerByOwnerId(@Param("ownerId") Long ownerId);
 
     List<Place> findByPlaceTypeInAndLatitudeBetweenAndLongitudeBetween(
             Collection<PlaceType> placeTypes,

@@ -1,10 +1,5 @@
 package com.teamnative.moss.domain.place.service;
 
-import com.teamnative.moss.domain.auth.entity.BusinessVerificationStatus;
-import com.teamnative.moss.domain.auth.entity.Role;
-import com.teamnative.moss.domain.auth.entity.UserAccount;
-import com.teamnative.moss.domain.auth.repository.BusinessVerificationRepository;
-import com.teamnative.moss.domain.auth.repository.UserRepository;
 import com.teamnative.moss.domain.place.dto.PlaceProductRequest;
 import com.teamnative.moss.domain.place.dto.PlaceProductResponse;
 import com.teamnative.moss.domain.place.entity.PlaceProduct;
@@ -21,33 +16,28 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class PlaceProductService {
-    private final UserRepository userRepository;
-    private final BusinessVerificationRepository verificationRepository;
+    private final BusinessPlaceAccessService businessPlaceAccessService;
     private final PlaceRepository placeRepository;
     private final PlaceProductRepository productRepository;
 
-    public PlaceProductService(UserRepository userRepository,
-                               BusinessVerificationRepository verificationRepository,
+    public PlaceProductService(BusinessPlaceAccessService businessPlaceAccessService,
                                PlaceRepository placeRepository,
                                PlaceProductRepository productRepository) {
-        this.userRepository = userRepository;
-        this.verificationRepository = verificationRepository;
+        this.businessPlaceAccessService = businessPlaceAccessService;
         this.placeRepository = placeRepository;
         this.productRepository = productRepository;
     }
 
     @Transactional(readOnly = true)
     public List<PlaceProductResponse> getBusinessProducts(String email, Long placeId) {
-        requireApprovedBusiness(email);
-        requirePlace(placeId);
+        businessPlaceAccessService.requireOwnedPlace(email, placeId);
         return productRepository.findByPlace_IdOrderBySortOrderAscIdAsc(placeId)
                 .stream().map(PlaceProductResponse::from).toList();
     }
 
     @Transactional
     public PlaceProductResponse create(String email, Long placeId, PlaceProductRequest request) {
-        requireApprovedBusiness(email);
-        Place place = requirePlace(placeId);
+        Place place = businessPlaceAccessService.requireOwnedPlace(email, placeId);
         int sortOrder = request.sortOrder() == null ? nextSortOrder(placeId) : request.sortOrder();
         PlaceProduct product = new PlaceProduct(place, request.name().trim(), request.price(), request.status(),
                 sortOrder, LocalDateTime.now());
@@ -56,7 +46,7 @@ public class PlaceProductService {
 
     @Transactional
     public PlaceProductResponse update(String email, Long placeId, Long productId, PlaceProductRequest request) {
-        requireApprovedBusiness(email);
+        businessPlaceAccessService.requireOwnedPlace(email, placeId);
         PlaceProduct product = productRepository.findByIdAndPlace_Id(productId, placeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다."));
         int sortOrder = request.sortOrder() == null ? product.getSortOrder() : request.sortOrder();
@@ -66,7 +56,7 @@ public class PlaceProductService {
 
     @Transactional
     public void delete(String email, Long placeId, Long productId) {
-        requireApprovedBusiness(email);
+        businessPlaceAccessService.requireOwnedPlace(email, placeId);
         PlaceProduct product = productRepository.findByIdAndPlace_Id(productId, placeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다."));
         productRepository.delete(product);
@@ -93,18 +83,4 @@ public class PlaceProductService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "매장을 찾을 수 없습니다."));
     }
 
-    private UserAccount requireApprovedBusiness(String email) {
-        UserAccount user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."));
-        if (user.getRole() != Role.BUSINESS) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "업주 계정만 이용할 수 있습니다.");
-        }
-        boolean approved = verificationRepository.findByUser_Id(user.getId())
-                .map(verification -> verification.getStatus() == BusinessVerificationStatus.APPROVED)
-                .orElse(false);
-        if (!approved) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사업자 인증 승인 후 이용할 수 있습니다.");
-        }
-        return user;
-    }
 }

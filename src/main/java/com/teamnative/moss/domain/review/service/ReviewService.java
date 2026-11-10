@@ -50,7 +50,7 @@ public class ReviewService {
         placeRepository.findById(placeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."));
 
-        Page<PlaceReview> result = reviewRepository.findByPlace_IdAndDeletedAtIsNullOrderByCreatedAtDesc(
+        Page<PlaceReview> result = reviewRepository.findByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullOrderByCreatedAtDesc(
                 placeId, PageRequest.of(page, size));
         Map<PlaceSearchFilter.NoiseLevel, Long> counts = new EnumMap<>(PlaceSearchFilter.NoiseLevel.class);
         for (Object[] row : reviewRepository.countNoiseLevels(placeId)) {
@@ -69,7 +69,8 @@ public class ReviewService {
                 .toList();
 
         Double average = reviewRepository.findAverageRating(placeId);
-        return new PlaceReviewListResponse(placeId.toString(), reviewRepository.countByPlace_IdAndDeletedAtIsNull(placeId),
+        return new PlaceReviewListResponse(placeId.toString(),
+                reviewRepository.countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNull(placeId),
                 average == null ? null : BigDecimal.valueOf(average).setScale(2, java.math.RoundingMode.HALF_UP),
                 distribution, reviews, page, size, result.hasNext());
     }
@@ -77,6 +78,7 @@ public class ReviewService {
     @Transactional
     public ReviewResponse createReview(String email, Long placeId, ReviewRequest request) {
         UserAccount user = findStudent(email);
+        requireReviewWriteAllowed(user);
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."));
         BigDecimal rating = validateAndNormalize(request);
@@ -103,6 +105,10 @@ public class ReviewService {
         UserAccount user = findStudent(email);
         PlaceReview review = reviewRepository.findByIdAndAuthorForUpdate(reviewId, user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."));
+        user = findStudentForReviewWrite(email);
+        if (review.isModerated()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "운영 정책 위반으로 숨김 처리된 리뷰는 수정할 수 없습니다.");
+        }
         if (review.isDeleted()) {
             throw new ResponseStatusException(HttpStatus.GONE, "삭제된 리뷰는 수정할 수 없습니다.");
         }
@@ -156,6 +162,24 @@ public class ReviewService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학생 회원만 리뷰를 작성하고 관리할 수 있습니다.");
         }
         return user;
+    }
+
+    private UserAccount findStudentForReviewWrite(String email) {
+        UserAccount user = userRepository.findByEmailForUpdate(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."));
+        if (user.getRole() != Role.STUDENT) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학생 회원만 리뷰를 작성하고 관리할 수 있습니다.");
+        }
+        requireReviewWriteAllowed(user);
+        return user;
+    }
+
+    private void requireReviewWriteAllowed(UserAccount user) {
+        LocalDateTime now = LocalDateTime.now();
+        if (user.isReviewRestrictedAt(now)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "리뷰 기능 이용이 제한되었습니다. 제한 종료 시각: " + user.getReviewRestrictedUntil());
+        }
     }
 
     private BigDecimal validateAndNormalize(ReviewRequest request) {

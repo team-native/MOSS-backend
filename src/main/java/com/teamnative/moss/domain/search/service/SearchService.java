@@ -4,39 +4,72 @@ import com.teamnative.moss.domain.search.dto.PlaceSearchResponse;
 import com.teamnative.moss.domain.search.dto.PlaceSearchFilter;
 import com.teamnative.moss.domain.search.entity.Place;
 import com.teamnative.moss.domain.search.repository.PlaceRepository;
+import com.teamnative.moss.global.exception.DomainException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SearchService {
-    private static final Pattern NON_LETTER_OR_DIGIT = Pattern.compile("[^\\p{L}\\p{N}]");
+    private static final Pattern SPECIAL_CHARACTERS = Pattern.compile("[^\\p{L}\\p{N}\\s]");
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
     private static final double EARTH_RADIUS_METERS = 6_371_000;
     private final PlaceRepository placeRepository;
+    private final RecentSearchService recentSearchService;
 
-    public SearchService(PlaceRepository placeRepository) {
+    public SearchService(PlaceRepository placeRepository, RecentSearchService recentSearchService) {
         this.placeRepository = placeRepository;
+        this.recentSearchService = recentSearchService;
     }
 
-    public PlaceSearchResponse searchPlaces(String rawQuery) {
-        return searchPlaces(rawQuery, new PlaceSearchFilter(null, null, null, null, null, null));
+    public List<com.teamnative.moss.domain.search.dto.RecentSearchResponse> getRecentSearches(String email) {
+        return recentSearchService.getRecentSearches(email);
     }
 
-    public PlaceSearchResponse searchPlaces(String rawQuery, PlaceSearchFilter filter) {
+    public void deleteRecentSearch(String email, Long id) {
+        recentSearchService.deleteRecentSearch(email, id);
+    }
+
+    public void deleteAllRecentSearches(String email) {
+        recentSearchService.deleteAllRecentSearches(email);
+    }
+
+    public PlaceSearchResponse searchPlaces(String email, String rawQuery, PlaceSearchFilter filter) {
         String query = normalize(rawQuery);
+        if (email != null) {
+            recentSearchService.record(email, query);
+        }
         String normalizedQuery = query.toLowerCase(java.util.Locale.ROOT);
+        Comparator<PlaceSearchResponse.Place> comparator = switch (filter.sort()) {
+            case PRICE_ASC -> Comparator.comparingInt(PlaceSearchResponse.Place::hourlyPrice)
+                    .thenComparing(PlaceSearchResponse.Place::id);
+            case QUIET -> Comparator.<PlaceSearchResponse.Place>comparingInt(place -> quietOrder(place.noiseLevel()))
+                    .thenComparing(PlaceSearchResponse.Place::id);
+            case DISTANCE -> Comparator.comparing(PlaceSearchResponse.Place::distanceMeters,
+                            Comparator.nullsLast(Integer::compareTo))
+                    .thenComparing(PlaceSearchResponse.Place::id);
+        };
         List<PlaceSearchResponse.Place> places = placeRepository.findAll()
                 .stream()
                 .filter(Place::isPubliclyVisible)
                 .filter(place -> normalize(place.getName()).toLowerCase(java.util.Locale.ROOT).contains(normalizedQuery))
                 .filter(place -> matches(place, filter))
                 .map(place -> toResponse(place, filter))
-                .sorted(Comparator.comparing(PlaceSearchResponse.Place::distanceMeters,
-                        Comparator.nullsLast(Integer::compareTo)))
+                .sorted(comparator)
                 .toList();
         return new PlaceSearchResponse(query, places);
+    }
+
+    private int quietOrder(String noiseLevel) {
+        return switch (noiseLevel) {
+            case "QUIET" -> 0;
+            case "NORMAL" -> 1;
+            case "TALK" -> 2;
+            default -> 3;
+        };
     }
 
     private boolean matches(Place place, PlaceSearchFilter filter) {
@@ -84,11 +117,12 @@ public class SearchService {
 
     static String normalize(String rawQuery) {
         if (rawQuery == null) {
-            throw new IllegalArgumentException("검색어를 입력해주세요.");
+            throw new DomainException(HttpStatus.BAD_REQUEST, "검색어를 입력해주세요.");
         }
-        String query = NON_LETTER_OR_DIGIT.matcher(rawQuery.trim()).replaceAll("");
+        String query = WHITESPACE.matcher(SPECIAL_CHARACTERS.matcher(rawQuery.trim()).replaceAll(""))
+                .replaceAll(" ");
         if (query.isBlank()) {
-            throw new IllegalArgumentException("검색어에 문자 또는 숫자를 입력해주세요.");
+            throw new DomainException(HttpStatus.BAD_REQUEST, "검색어에 문자 또는 숫자를 입력해주세요.");
         }
         return query;
     }

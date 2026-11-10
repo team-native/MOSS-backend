@@ -5,6 +5,7 @@ import com.teamnative.moss.domain.auth.repository.UserRepository;
 import com.teamnative.moss.domain.favorite.repository.FavoriteRepository;
 import com.teamnative.moss.domain.place.dto.PlaceDetailResponse;
 import com.teamnative.moss.domain.place.dto.PlaceEventResponse;
+import com.teamnative.moss.domain.place.entity.PlaceEventStatus;
 import com.teamnative.moss.domain.place.repository.PlaceEventRepository;
 import com.teamnative.moss.domain.review.repository.PlaceReviewRepository;
 import com.teamnative.moss.domain.search.dto.PlaceSearchFilter;
@@ -46,7 +47,7 @@ public class PlaceDetailService {
                 .filter(Place::isPubliclyVisible)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "공개된 장소를 찾을 수 없습니다."));
 
-        long reviewCount = reviewRepository.countByPlace_IdAndDeletedAtIsNull(placeId);
+        long reviewCount = reviewRepository.countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNull(placeId);
         Double averageValue = reviewRepository.findAverageRating(placeId);
         BigDecimal averageRating = averageValue == null ? null
                 : BigDecimal.valueOf(averageValue).setScale(2, RoundingMode.HALF_UP);
@@ -84,8 +85,8 @@ public class PlaceDetailService {
 
     private java.util.List<PlaceEventResponse> getActiveEvents(Long placeId) {
         LocalDate today = LocalDate.now();
-        return eventRepository.findByPlace_IdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAscIdAsc(
-                        placeId, today, today)
+        return eventRepository.findByPlace_IdAndApprovalStatusAndDeletedAtIsNullAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAscIdAsc(
+                        placeId, PlaceEventStatus.APPROVED, today, today)
                 .stream().map(PlaceEventResponse::from).toList();
     }
 

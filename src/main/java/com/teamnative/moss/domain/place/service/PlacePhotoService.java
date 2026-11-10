@@ -1,10 +1,5 @@
 package com.teamnative.moss.domain.place.service;
 
-import com.teamnative.moss.domain.auth.entity.BusinessVerificationStatus;
-import com.teamnative.moss.domain.auth.entity.Role;
-import com.teamnative.moss.domain.auth.entity.UserAccount;
-import com.teamnative.moss.domain.auth.repository.BusinessVerificationRepository;
-import com.teamnative.moss.domain.auth.repository.UserRepository;
 import com.teamnative.moss.domain.place.dto.PlacePhotoListResponse;
 import com.teamnative.moss.domain.place.dto.PlacePhotoMetadata;
 import com.teamnative.moss.domain.place.dto.PlacePhotoResponse;
@@ -26,25 +21,21 @@ import org.springframework.web.server.ResponseStatusException;
 public class PlacePhotoService {
     private static final long MAX_PHOTO_BYTES = 10L * 1024 * 1024;
 
-    private final UserRepository userRepository;
-    private final BusinessVerificationRepository verificationRepository;
+    private final BusinessPlaceAccessService businessPlaceAccessService;
     private final PlaceRepository placeRepository;
     private final PlacePhotoRepository photoRepository;
 
-    public PlacePhotoService(UserRepository userRepository,
-                             BusinessVerificationRepository verificationRepository,
+    public PlacePhotoService(BusinessPlaceAccessService businessPlaceAccessService,
                              PlaceRepository placeRepository,
                              PlacePhotoRepository photoRepository) {
-        this.userRepository = userRepository;
-        this.verificationRepository = verificationRepository;
+        this.businessPlaceAccessService = businessPlaceAccessService;
         this.placeRepository = placeRepository;
         this.photoRepository = photoRepository;
     }
 
     @Transactional(readOnly = true)
     public PlacePhotoListResponse getBusinessPhotos(String email, Long placeId) {
-        requireApprovedBusiness(email);
-        Place place = requirePlace(placeId);
+        Place place = businessPlaceAccessService.requireOwnedPlace(email, placeId);
         List<PlacePhotoMetadata> photos = photoRepository.findMetadataByPlaceId(placeId);
         PlacePhotoResponse representative = photos.stream().filter(PlacePhotoMetadata::representative)
                 .findFirst().map(PlacePhotoResponse::from).orElse(null);
@@ -55,8 +46,8 @@ public class PlacePhotoService {
 
     @Transactional
     public PlacePhotoResponse replaceRepresentative(String email, Long placeId, MultipartFile file) {
-        requireApprovedBusiness(email);
         Place place = requirePlaceForUpdate(placeId);
+        businessPlaceAccessService.requireOwnedPlace(email, place);
         ValidatedPhoto photo = validate(file);
         PlacePhoto existing = photoRepository.findByPlace_IdAndRepresentativeTrue(placeId).orElse(null);
         if (existing == null) {
@@ -70,8 +61,8 @@ public class PlacePhotoService {
 
     @Transactional
     public PlacePhotoResponse addPhoto(String email, Long placeId, MultipartFile file) {
-        requireApprovedBusiness(email);
         Place place = requirePlaceForUpdate(placeId);
+        businessPlaceAccessService.requireOwnedPlace(email, place);
         if (photoRepository.countByPlace_IdAndRepresentativeFalse(placeId) >= 10) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "매장 사진은 최대 10장까지 등록할 수 있습니다.");
         }
@@ -85,7 +76,7 @@ public class PlacePhotoService {
 
     @Transactional
     public void deletePhoto(String email, Long placeId, Long photoId) {
-        requireApprovedBusiness(email);
+        businessPlaceAccessService.requireOwnedPlace(email, placeId);
         boolean representative = photoRepository.isRepresentative(photoId, placeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "매장 사진을 찾을 수 없습니다."));
         if (representative) {
@@ -98,8 +89,8 @@ public class PlacePhotoService {
 
     @Transactional
     public boolean updateVisibility(String email, Long placeId, boolean publiclyVisible) {
-        requireApprovedBusiness(email);
         Place place = requirePlaceForUpdate(placeId);
+        businessPlaceAccessService.requireOwnedPlace(email, place);
         place.changeVisibility(publiclyVisible);
         return place.isPubliclyVisible();
     }
@@ -141,21 +132,6 @@ public class PlacePhotoService {
     private Place requirePlaceForUpdate(Long placeId) {
         return placeRepository.findByIdForVisibilityUpdate(placeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "매장을 찾을 수 없습니다."));
-    }
-
-    private UserAccount requireApprovedBusiness(String email) {
-        UserAccount user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."));
-        if (user.getRole() != Role.BUSINESS) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "업주 계정만 이용할 수 있습니다.");
-        }
-        boolean approved = verificationRepository.findByUser_Id(user.getId())
-                .map(verification -> verification.getStatus() == BusinessVerificationStatus.APPROVED)
-                .orElse(false);
-        if (!approved) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사업자 인증 승인 후 이용할 수 있습니다.");
-        }
-        return user;
     }
 
     private ValidatedPhoto validate(MultipartFile file) {

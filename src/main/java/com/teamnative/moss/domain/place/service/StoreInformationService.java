@@ -2,11 +2,7 @@ package com.teamnative.moss.domain.place.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.teamnative.moss.domain.auth.entity.BusinessVerificationStatus;
-import com.teamnative.moss.domain.auth.entity.Role;
 import com.teamnative.moss.domain.auth.entity.UserAccount;
-import com.teamnative.moss.domain.auth.repository.BusinessVerificationRepository;
-import com.teamnative.moss.domain.auth.repository.UserRepository;
 import com.teamnative.moss.domain.place.dto.CallAvailability;
 import com.teamnative.moss.domain.place.dto.StoreInformationRequest;
 import com.teamnative.moss.domain.place.dto.StoreInformationResponse;
@@ -23,19 +19,16 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class StoreInformationService {
-    private final UserRepository userRepository;
-    private final BusinessVerificationRepository verificationRepository;
+    private final BusinessPlaceAccessService businessPlaceAccessService;
     private final PlaceRepository placeRepository;
     private final PlaceInformationRevisionRepository revisionRepository;
     private final ObjectMapper objectMapper;
 
-    public StoreInformationService(UserRepository userRepository,
-                                   BusinessVerificationRepository verificationRepository,
+    public StoreInformationService(BusinessPlaceAccessService businessPlaceAccessService,
                                    PlaceRepository placeRepository,
                                    PlaceInformationRevisionRepository revisionRepository,
                                    ObjectMapper objectMapper) {
-        this.userRepository = userRepository;
-        this.verificationRepository = verificationRepository;
+        this.businessPlaceAccessService = businessPlaceAccessService;
         this.placeRepository = placeRepository;
         this.revisionRepository = revisionRepository;
         this.objectMapper = objectMapper;
@@ -43,18 +36,17 @@ public class StoreInformationService {
 
     @Transactional(readOnly = true)
     public StoreInformationResponse getInformation(String email, Long placeId) {
-        requireApprovedBusiness(email);
-        Place place = placeRepository.findById(placeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "매장을 찾을 수 없습니다."));
+        Place place = businessPlaceAccessService.requireOwnedPlace(email, placeId);
         return StoreInformationResponse.from(place);
     }
 
     @Transactional
     public StoreInformationResponse updateInformation(String email, Long placeId,
                                                       StoreInformationRequest request) {
-        UserAccount business = requireApprovedBusiness(email);
         Place place = placeRepository.findByIdForInformationUpdate(placeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "매장을 찾을 수 없습니다."));
+        businessPlaceAccessService.requireOwnedPlace(email, place);
+        UserAccount business = place.getOwner();
 
         StoreInformationResponse previous = StoreInformationResponse.from(place);
         place.updateInformation(request.name().trim(), request.address().trim(), request.placeType(),
@@ -78,21 +70,6 @@ public class StoreInformationService {
         revisionRepository.save(new PlaceInformationRevision(place, business, toJson(previous), toJson(updated),
                 LocalDateTime.now()));
         return updated;
-    }
-
-    private UserAccount requireApprovedBusiness(String email) {
-        UserAccount user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."));
-        if (user.getRole() != Role.BUSINESS) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "업주 계정만 이용할 수 있습니다.");
-        }
-        boolean approved = verificationRepository.findByUser_Id(user.getId())
-                .map(verification -> verification.getStatus() == BusinessVerificationStatus.APPROVED)
-                .orElse(false);
-        if (!approved) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사업자 인증 승인 후 이용할 수 있습니다.");
-        }
-        return user;
     }
 
     private String normalizeOptional(String value) {

@@ -92,6 +92,17 @@ public class UserReport {
     @Column(name = "review_report_reason", length = 30)
     private ReviewReportReason reviewReportReason;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_report_outcome", length = 30)
+    private ReviewReportOutcome reviewReportOutcome;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_sanction_level", length = 30)
+    private ReviewSanctionLevel reviewSanctionLevel;
+
+    @Column(name = "review_sanction_until")
+    private LocalDateTime reviewSanctionUntil;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -158,6 +169,19 @@ public class UserReport {
         this.updatedAt = now;
     }
 
+    public void completeReviewProcessing(ReviewReportOutcome outcome, ReviewSanctionLevel sanctionLevel,
+                                         LocalDateTime sanctionUntil, String resultReason, LocalDateTime now) {
+        if (reportType != ReportType.REVIEW) {
+            throw new IllegalStateException("리뷰 신고만 검토 완료할 수 있습니다.");
+        }
+        this.status = ReportStatus.COMPLETED;
+        this.reviewReportOutcome = outcome;
+        this.reviewSanctionLevel = sanctionLevel;
+        this.reviewSanctionUntil = sanctionUntil;
+        this.resultReason = resultReason;
+        this.updatedAt = now;
+    }
+
     public Long getId() { return id; }
     public UserAccount getReporter() { return reporter; }
     public String getReportNumber() { return reportNumber; }
@@ -176,4 +200,7 @@ public class UserReport {
     public String getResultReason() { return resultReason; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public ReviewReportOutcome getReviewReportOutcome() { return reviewReportOutcome; }
+    public ReviewSanctionLevel getReviewSanctionLevel() { return reviewSanctionLevel; }
+    public LocalDateTime getReviewSanctionUntil() { return reviewSanctionUntil; }
 }

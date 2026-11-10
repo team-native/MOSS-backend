@@ -10,4 +10,8 @@ public interface AuthSessionRepository extends JpaRepository<AuthSession, String
     @Modifying
     @Query("update AuthSession session set session.revokedAt = :now where session.userId = :userId and session.revokedAt is null")
     int revokeAllForUser(@Param("userId") Long userId, @Param("now") java.time.Instant now);
+
+    @Modifying
+    @Query("delete from AuthSession session where session.userId = :userId")
+    int deleteAllForUser(@Param("userId") Long userId);
 }

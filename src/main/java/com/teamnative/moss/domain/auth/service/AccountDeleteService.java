@@ -2,6 +2,8 @@ package com.teamnative.moss.domain.auth.service;
 
 import com.teamnative.moss.domain.auth.repository.AuthSessionRepository;
 import com.teamnative.moss.domain.auth.repository.UserRepository;
+import com.teamnative.moss.domain.auth.entity.UserAccount;
+import java.util.List;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
@@ -14,10 +16,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class AccountDeleteService {
     private final UserRepository userRepository;
     private final AuthSessionRepository authSessionRepository;
+    private final AccountDataCleanupService accountDataCleanupService;
 
-    public AccountDeleteService(UserRepository userRepository, AuthSessionRepository authSessionRepository) {
+    public AccountDeleteService(UserRepository userRepository,
+                                AuthSessionRepository authSessionRepository,
+                                AccountDataCleanupService accountDataCleanupService) {
         this.userRepository = userRepository;
         this.authSessionRepository = authSessionRepository;
+        this.accountDataCleanupService = accountDataCleanupService;
     }
 
     @Transactional
@@ -31,6 +37,10 @@ public class AccountDeleteService {
     @Scheduled(cron = "0 0 3 * * *")
     @Transactional
     public void deleteExpiredAccounts() {
-        userRepository.deleteExpiredAccounts(LocalDateTime.now().minusDays(30));
+        List<UserAccount> expiredAccounts = userRepository.findExpiredForDeletion(LocalDateTime.now().minusDays(30));
+        for (UserAccount user : expiredAccounts) {
+            accountDataCleanupService.deleteUserData(user);
+            userRepository.delete(user);
+        }
     }
 }
