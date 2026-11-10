@@ -14,31 +14,34 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
 public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> {
-    long countByAuthor_IdAndDeletedAtIsNull(Long authorId);
+    long countByAuthor_IdAndDeletedAtIsNullAndModeratedAtIsNull(Long authorId);
 
-    long countByPlace_IdAndDeletedAtIsNull(Long placeId);
+    long countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNull(Long placeId);
 
-    long countByPlace_IdAndDeletedAtIsNullAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+    long countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
             Long placeId, LocalDateTime from, LocalDateTime to);
 
-    long countByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNull(Long placeId);
+    long countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullAndBusinessReplyIsNull(Long placeId);
 
-    @Query("select avg(review.rating) from PlaceReview review where review.place.id = :placeId and review.deletedAt is null")
+    @Query("select avg(review.rating) from PlaceReview review where review.place.id = :placeId "
+            + "and review.deletedAt is null and review.moderatedAt is null")
     Double findAverageRating(@Param("placeId") Long placeId);
 
     @Query("select review.noiseLevel, count(review.id) from PlaceReview review "
-            + "where review.place.id = :placeId and review.deletedAt is null group by review.noiseLevel")
+            + "where review.place.id = :placeId and review.deletedAt is null and review.moderatedAt is null "
+            + "group by review.noiseLevel")
     List<Object[]> countNoiseLevels(@Param("placeId") Long placeId);
 
     @EntityGraph(attributePaths = {"place", "businessReplyAuthor"})
-    Page<PlaceReview> findByPlace_IdAndDeletedAtIsNullOrderByCreatedAtDesc(Long placeId, Pageable pageable);
-
-    @EntityGraph(attributePaths = {"place", "businessReplyAuthor"})
-    Page<PlaceReview> findByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNullOrderByCreatedAtDesc(
+    Page<PlaceReview> findByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullOrderByCreatedAtDesc(
             Long placeId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"place", "businessReplyAuthor"})
-    Page<PlaceReview> findByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNotNullOrderByCreatedAtDesc(
+    Page<PlaceReview> findByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullAndBusinessReplyIsNullOrderByCreatedAtDesc(
+            Long placeId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"place", "businessReplyAuthor"})
+    Page<PlaceReview> findByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullAndBusinessReplyIsNotNullOrderByCreatedAtDesc(
             Long placeId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"place", "photoUrls"})
@@ -49,6 +52,10 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select review from PlaceReview review where review.id = :reviewId")
     Optional<PlaceReview> findByIdForReport(@Param("reviewId") Long reviewId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select review from PlaceReview review where review.id = :reviewId")
+    Optional<PlaceReview> findByIdForModeration(@Param("reviewId") Long reviewId);
 
     @EntityGraph(attributePaths = {"place", "photoUrls"})
     @Lock(LockModeType.PESSIMISTIC_WRITE)

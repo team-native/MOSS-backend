@@ -17,6 +17,7 @@ public record UserReportResponse(
         String reviewId,
         String issueType,
         String reviewReportReason,
+        String reviewReportOutcome,
         String content,
         List<String> photoUrls,
         String resultReason,
@@ -34,7 +35,8 @@ public record UserReportResponse(
                 report.getRecommendationReason(), report.getPlace() == null ? null : report.getPlace().getId().toString(),
                 report.getReview() == null ? null : report.getReview().getId().toString(),
                 report.getIssueType() == null ? null : report.getIssueType().name(),
-                report.getReviewReportReason() == null ? null : report.getReviewReportReason().name(), report.getContent(),
+                report.getReviewReportReason() == null ? null : report.getReviewReportReason().name(),
+                report.getReviewReportOutcome() == null ? null : report.getReviewReportOutcome().name(), report.getContent(),
                 report.getPhotoUrls(), report.getResultReason(),
                 report.getCreatedAt(), report.getUpdatedAt());
     }

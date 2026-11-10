@@ -41,22 +41,22 @@ public class BusinessDashboardService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime sevenDaysAgo = now.minusDays(7);
         LocalDateTime fourteenDaysAgo = now.minusDays(14);
-        long recentCount = reviewRepository.countByPlace_IdAndDeletedAtIsNullAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+        long recentCount = reviewRepository.countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
                 placeId, sevenDaysAgo, now);
-        long previousCount = reviewRepository.countByPlace_IdAndDeletedAtIsNullAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+        long previousCount = reviewRepository.countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
                 placeId, fourteenDaysAgo, sevenDaysAgo);
         long pendingReports = reportRepository.countByPlace_IdAndReportTypeAndStatusIn(
                 placeId, ReportType.INFO_ERROR, PENDING_REPORT_STATUSES);
 
         return BusinessDashboardResponse.from(place,
-                reviewRepository.countByPlace_IdAndDeletedAtIsNull(placeId), recentCount, previousCount,
-                reviewRepository.countByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNull(placeId),
+                reviewRepository.countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNull(placeId), recentCount, previousCount,
+                reviewRepository.countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullAndBusinessReplyIsNull(placeId),
                 eventRepository.countByPlace_IdAndApprovalStatusAndDeletedAtIsNullAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                         placeId, PlaceEventStatus.APPROVED, LocalDate.now(), LocalDate.now()),
                 pendingReports,
                 reportRepository.findByPlace_IdAndReportTypeAndStatusInOrderByCreatedAtDesc(
                         placeId, ReportType.INFO_ERROR, PENDING_REPORT_STATUSES, PageRequest.of(0, 5)).getContent(),
-                reviewRepository.findByPlace_IdAndDeletedAtIsNullOrderByCreatedAtDesc(
+                reviewRepository.findByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullOrderByCreatedAtDesc(
                         placeId, PageRequest.of(0, 5)).getContent());
     }
 

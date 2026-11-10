@@ -43,6 +43,12 @@ public class UserAccount {
     @Column(name = "login_locked_until")
     private LocalDateTime loginLockedUntil;
 
+    @Column(name = "review_violation_count", nullable = false, columnDefinition = "integer default 0")
+    private int reviewViolationCount;
+
+    @Column(name = "review_restricted_until")
+    private LocalDateTime reviewRestrictedUntil;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = true, length = 20)
     private Grade grade;
@@ -179,4 +185,23 @@ public class UserAccount {
         failedLoginAttempts = 0;
         loginLockedUntil = null;
     }
+
+    public int recordReviewViolation() {
+        return ++reviewViolationCount;
+    }
+
+    public LocalDateTime extendReviewRestriction(LocalDateTime now, long days) {
+        LocalDateTime startsAt = reviewRestrictedUntil != null && reviewRestrictedUntil.isAfter(now)
+                ? reviewRestrictedUntil : now;
+        reviewRestrictedUntil = startsAt.plusDays(days);
+        return reviewRestrictedUntil;
+    }
+
+    public boolean isReviewRestrictedAt(LocalDateTime now) {
+        return reviewRestrictedUntil != null && reviewRestrictedUntil.isAfter(now);
+    }
+
+    public int getReviewViolationCount() { return reviewViolationCount; }
+
+    public LocalDateTime getReviewRestrictedUntil() { return reviewRestrictedUntil; }
 }

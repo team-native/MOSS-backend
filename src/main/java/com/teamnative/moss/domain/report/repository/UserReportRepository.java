@@ -44,6 +44,9 @@ public interface UserReportRepository extends JpaRepository<UserReport, Long> {
     @EntityGraph(attributePaths = "photoUrls")
     List<UserReport> findByReportTypeAndStatusOrderByCreatedAtAsc(ReportType reportType, ReportStatus status);
 
+    List<UserReport> findByReportTypeAndStatusInOrderByCreatedAtAsc(
+            ReportType reportType, Collection<ReportStatus> statuses);
+
     long countByPlace_IdAndReportTypeAndStatusIn(Long placeId, ReportType reportType,
                                                   Collection<ReportStatus> statuses);
 

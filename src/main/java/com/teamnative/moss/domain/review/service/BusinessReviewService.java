@@ -34,10 +34,10 @@ public class BusinessReviewService {
 
         PageRequest pageRequest = PageRequest.of(page, size);
         Page<PlaceReview> result = switch (filter) {
-            case ALL -> reviewRepository.findByPlace_IdAndDeletedAtIsNullOrderByCreatedAtDesc(placeId, pageRequest);
-            case UNANSWERED -> reviewRepository.findByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNullOrderByCreatedAtDesc(
+            case ALL -> reviewRepository.findByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullOrderByCreatedAtDesc(placeId, pageRequest);
+            case UNANSWERED -> reviewRepository.findByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullAndBusinessReplyIsNullOrderByCreatedAtDesc(
                     placeId, pageRequest);
-            case ANSWERED -> reviewRepository.findByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNotNullOrderByCreatedAtDesc(
+            case ANSWERED -> reviewRepository.findByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNullAndBusinessReplyIsNotNullOrderByCreatedAtDesc(
                     placeId, pageRequest);
         };
         return new BusinessReviewListResponse(placeId.toString(),

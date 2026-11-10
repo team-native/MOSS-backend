@@ -32,6 +32,10 @@ public interface UserRepository extends JpaRepository<UserAccount, Long> {
     Optional<UserAccount> findByEmailForPasswordUpdate(@Param("email") String email);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from UserAccount user where user.id = :id")
+    Optional<UserAccount> findByIdForReviewModeration(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select user from UserAccount user where user.deletedAt is not null and user.deletedAt <= :cutoff")
     List<UserAccount> findExpiredForDeletion(@Param("cutoff") LocalDateTime cutoff);
 

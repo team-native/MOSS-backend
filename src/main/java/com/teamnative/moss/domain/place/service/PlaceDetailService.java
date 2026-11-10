@@ -47,7 +47,7 @@ public class PlaceDetailService {
                 .filter(Place::isPubliclyVisible)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "공개된 장소를 찾을 수 없습니다."));
 
-        long reviewCount = reviewRepository.countByPlace_IdAndDeletedAtIsNull(placeId);
+        long reviewCount = reviewRepository.countByPlace_IdAndDeletedAtIsNullAndModeratedAtIsNull(placeId);
         Double averageValue = reviewRepository.findAverageRating(placeId);
         BigDecimal averageRating = averageValue == null ? null
                 : BigDecimal.valueOf(averageValue).setScale(2, RoundingMode.HALF_UP);
