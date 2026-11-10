@@ -1,5 +1,14 @@
 package com.teamnative.moss.global.logging;
 
+import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.teamnative.moss.global.logging.AppLogDto.ErrorLogData;
+import com.teamnative.moss.global.logging.AppLogDto.HttpLogData;
+import com.teamnative.moss.global.logging.AppLogDto.PayloadLogData;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
@@ -8,33 +17,24 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
-import org.springframework.web.util.ContentCachingResponseWrapper;
-
-import com.teamnative.moss.global.logging.AppLogDto.ErrorLogData;
-import com.teamnative.moss.global.logging.AppLogDto.HttpLogData;
-import com.teamnative.moss.global.logging.AppLogDto.PayloadLogData;
-
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import com.fasterxml.jackson.core.JacksonException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 public class HttpLoggingFilter extends OncePerRequestFilter {
-
     public static final String TRACE_ID_ATTRIBUTE = "backend.traceId";
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
     private static final int MAX_BODY_LENGTH = 2_000;
     private static final String REDACTED_BODY_VALUE = "[REDACTED_BODY_CONTAINS_SENSITIVE_FIELD]";
+    private static final String TRUNCATED_BODY_VALUE = "[JSON_BODY_TRUNCATED]";
+    private static final Pattern TRACE_ID_PATTERN = Pattern.compile(
+            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
     private static final List<String> LOGGABLE_HEADERS = List.of(
             "Content-Type",
             "Content-Length",
@@ -51,14 +51,11 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
         String traceId = traceId(request);
-        ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request, MAX_BODY_LENGTH);
-        ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
+        LimitedRequestWrapper wrappedRequest = new LimitedRequestWrapper(request, MAX_BODY_LENGTH);
+        JsonResponseCaptureWrapper wrappedResponse = new JsonResponseCaptureWrapper(response, MAX_BODY_LENGTH);
         long startedAt = System.currentTimeMillis();
         wrappedRequest.setAttribute(TRACE_ID_ATTRIBUTE, traceId);
 
@@ -72,11 +69,10 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
             wrappedResponse.setHeader(TRACE_ID_HEADER, traceId);
             logRequest(traceId, wrappedRequest);
             logResponse(traceId, wrappedRequest, wrappedResponse, durationMs);
-            wrappedResponse.copyBodyToResponse();
         }
     }
 
-    private void logRequest(String traceId, ContentCachingRequestWrapper request) {
+    private void logRequest(String traceId, LimitedRequestWrapper request) {
         appLogger.info(new AppLogDto(
                 LogLevel.INFO,
                 LogEvent.EXTERNAL_REQUEST,
@@ -98,7 +94,8 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
                                                 (left, right) -> right,
                                                 LinkedHashMap::new
                                         ))),
-                                parseBody(request.getContentAsByteArray(), request.getCharacterEncoding())
+                                parseBody(request.getContentAsByteArray(), request.getCharacterEncoding(),
+                                        request.getContentType(), request.isContentOverflowed())
                         ),
                         null
                 ),
@@ -106,12 +103,8 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
         ));
     }
 
-    private void logResponse(
-            String traceId,
-            HttpServletRequest request,
-            ContentCachingResponseWrapper response,
-            long durationMs
-    ) {
+    private void logResponse(String traceId, HttpServletRequest request,
+                             JsonResponseCaptureWrapper response, long durationMs) {
         int status = response.getStatus();
         AppLogDto log = new AppLogDto(
                 status >= 500 ? LogLevel.ERROR : LogLevel.INFO,
@@ -135,7 +128,8 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
                                                 (left, right) -> right,
                                                 LinkedHashMap::new
                                         ))),
-                                parseBody(response.getContentAsByteArray(), response.getCharacterEncoding())
+                                parseBody(response.capturedJsonBody(), response.getCharacterEncoding(),
+                                        response.getContentType(), response.isTruncated())
                         )
                 ),
                 null
@@ -143,18 +137,12 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
 
         if (status >= 500) {
             appLogger.error(log);
-            return;
+        } else {
+            appLogger.info(log);
         }
-
-        appLogger.info(log);
     }
 
-    private void logError(
-            String traceId,
-            HttpServletRequest request,
-            long startedAt,
-            Exception exception
-    ) {
+    private void logError(String traceId, HttpServletRequest request, long startedAt, Exception exception) {
         appLogger.error(new AppLogDto(
                 LogLevel.ERROR,
                 LogEvent.ERROR_OCCURRED,
@@ -173,46 +161,53 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
                 ),
                 new ErrorLogData(
                         exception.getClass().getName(),
-                        exception.getMessage(),
+                        "Request processing failed.",
                         HttpServletResponse.SC_INTERNAL_SERVER_ERROR
                 )
-        ), exception);
+        ));
     }
 
     private String traceId(HttpServletRequest request) {
         String headerTraceId = request.getHeader(TRACE_ID_HEADER);
-        return headerTraceId == null || headerTraceId.isBlank()
-                ? UUID.randomUUID().toString()
-                : headerTraceId;
+        if (headerTraceId != null && TRACE_ID_PATTERN.matcher(headerTraceId).matches()) {
+            return headerTraceId.toLowerCase(Locale.ROOT);
+        }
+        return UUID.randomUUID().toString();
     }
 
     private Map<String, String> loggableHeaders(Map<String, String> headers) {
         Map<String, String> loggable = new LinkedHashMap<>();
         headers.forEach((key, value) -> {
             boolean allowed = LOGGABLE_HEADERS.stream().anyMatch(header -> header.equalsIgnoreCase(key));
-            if (!allowed) {
-                return;
+            if (allowed) {
+                loggable.put(key, LogSanitizer.isSensitive(key) ? LogSanitizer.MASKED_VALUE : value);
             }
-
-            loggable.put(key, LogSanitizer.isSensitive(key) ? LogSanitizer.MASKED_VALUE : value);
         });
         return loggable;
     }
 
-    private Object parseBody(byte[] bytes, String encoding) {
-        if (bytes == null || bytes.length == 0) {
+    private Object parseBody(byte[] bytes, String encoding, String contentType, boolean truncated) {
+        if (!isJsonContentType(contentType) || bytes == null || bytes.length == 0) {
             return null;
         }
-
-        Charset charset = charset(encoding);
-        String body = new String(bytes, charset);
-        String limitedBody = body.length() > MAX_BODY_LENGTH ? body.substring(0, MAX_BODY_LENGTH) : body;
-
-        try {
-            return sanitizeBody(objectMapper.readValue(limitedBody, Object.class));
-        } catch (JacksonException ignored) {
-            return sanitizeRawBody(limitedBody);
+        if (truncated) {
+            return TRUNCATED_BODY_VALUE;
         }
+
+        String body = new String(bytes, charset(encoding));
+        try {
+            return sanitizeBody(objectMapper.readValue(body, Object.class));
+        } catch (JacksonException ignored) {
+            return sanitizeRawBody(body);
+        }
+    }
+
+    private boolean isJsonContentType(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        String mediaType = contentType.split(";", 2)[0].trim().toLowerCase(Locale.ROOT);
+        return mediaType.equals("application/json") || mediaType.endsWith("+json");
     }
 
     private Object sanitizeBody(Object value) {
@@ -226,13 +221,9 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
             });
             return sanitized;
         }
-
         if (value instanceof Collection<?> collection) {
-            return collection.stream()
-                    .map(this::sanitizeBody)
-                    .toList();
+            return collection.stream().map(this::sanitizeBody).toList();
         }
-
         return value;
     }
 
@@ -240,7 +231,6 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
         if (query == null || query.isBlank()) {
             return query;
         }
-
         return List.of(query.split("&")).stream()
                 .map(this::sanitizeQueryPart)
                 .collect(Collectors.joining("&"));
@@ -249,14 +239,12 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
     private String sanitizeQueryPart(String part) {
         String key = part.contains("=") ? part.substring(0, part.indexOf("=")) : part;
         String decodedKey = decodeUrlValue(key);
-        return LogSanitizer.isSensitive(decodedKey)
-                ? key + "=" + LogSanitizer.MASKED_VALUE
-                : part;
+        return LogSanitizer.isSensitive(decodedKey) ? key + "=" + LogSanitizer.MASKED_VALUE : part;
     }
 
     private String sanitizeRawBody(String body) {
         return LogSanitizer.SENSITIVE_KEYS.stream()
-                .anyMatch(key -> body.toLowerCase().contains(key.toLowerCase()))
+                .anyMatch(key -> body.toLowerCase(Locale.ROOT).contains(key.toLowerCase(Locale.ROOT)))
                 ? REDACTED_BODY_VALUE
                 : body;
     }
@@ -278,11 +266,23 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
     }
 
     private String clientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
+        return request.getRemoteAddr();
+    }
+
+    private static final class LimitedRequestWrapper extends ContentCachingRequestWrapper {
+        private boolean contentOverflowed;
+
+        private LimitedRequestWrapper(HttpServletRequest request, int contentCacheLimit) {
+            super(request, contentCacheLimit);
         }
 
-        return request.getRemoteAddr();
+        @Override
+        protected void handleContentOverflow(int contentCacheLimit) {
+            contentOverflowed = true;
+        }
+
+        private boolean isContentOverflowed() {
+            return contentOverflowed;
+        }
     }
 }

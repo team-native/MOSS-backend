@@ -1,6 +1,7 @@
 package com.teamnative.moss.global.logging;
 
 import java.util.List;
+import java.util.Locale;
 
 public final class LogSanitizer {
 
@@ -9,6 +10,14 @@ public final class LogSanitizer {
             "authorization",
             "password",
             "pwd",
+            "code",
+            "email",
+            "name",
+            "phone",
+            "mobile",
+            "telephone",
+            "tel",
+            "number",
             "token",
             "secret",
             "cookie"
@@ -22,9 +31,7 @@ public final class LogSanitizer {
             return false;
         }
 
-        String lowerKey = key.toLowerCase();
-        return SENSITIVE_KEYS.stream()
-                .map(String::toLowerCase)
-                .anyMatch(lowerKey::contains);
+        String lowerKey = key.toLowerCase(Locale.ROOT);
+        return SENSITIVE_KEYS.stream().anyMatch(lowerKey::contains);
     }
 }
