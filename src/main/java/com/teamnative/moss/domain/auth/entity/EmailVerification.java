@@ -3,11 +3,14 @@ package com.teamnative.moss.domain.auth.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "email_verifications")
+@Table(name = "email_verifications", indexes = {
+        @Index(name = "uk_email_verifications_reset_token_hash", columnList = "reset_token_hash", unique = true)
+})
 public class EmailVerification {
     @Id
     @Column(nullable = false, length = 254)
@@ -28,7 +31,7 @@ public class EmailVerification {
     @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
 
-    @Column(name = "reset_token_hash", length = 100)
+    @Column(name = "reset_token_hash", length = 64)
     private String resetTokenHash;
 
     @Column(name = "reset_token_expires_at")

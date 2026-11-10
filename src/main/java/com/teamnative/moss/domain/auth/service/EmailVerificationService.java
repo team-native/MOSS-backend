@@ -8,7 +8,11 @@ import com.teamnative.moss.domain.auth.entity.EmailVerification;
 import com.teamnative.moss.domain.auth.repository.EmailVerificationRepository;
 import com.teamnative.moss.domain.auth.repository.UserRepository;
 import java.security.SecureRandom;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.HexFormat;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import org.springframework.beans.factory.ObjectProvider;
@@ -118,7 +122,7 @@ public class EmailVerificationService {
         SECURE_RANDOM.nextBytes(tokenBytes);
         String resetToken = Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
         LocalDateTime resetTokenExpiresAt = now.plusMinutes(RESET_TOKEN_TTL_MINUTES);
-        verification.markVerified(passwordEncoder.encode(resetToken), now, resetTokenExpiresAt);
+        verification.markVerified(hashResetToken(resetToken), now, resetTokenExpiresAt);
         verificationRepository.save(verification);
         return new VerifyEmailResponse(resetToken, resetTokenExpiresAt);
     }
@@ -126,17 +130,9 @@ public class EmailVerificationService {
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         LocalDateTime now = LocalDateTime.now();
-        EmailVerification candidate = verificationRepository.findAllByVerifiedAtIsNotNullAndResetTokenExpiresAtAfter(now).stream()
-                .filter(row -> row.getResetTokenHash() != null
-                        && passwordEncoder.matches(request.resetToken(), row.getResetTokenHash()))
-                .findFirst()
-                .orElseThrow(this::invalidResetToken);
-        EmailVerification verification = verificationRepository.findByEmailForUpdate(candidate.getEmail())
-                .filter(current -> current.isVerified()
-                        && current.getResetTokenExpiresAt() != null
-                        && current.getResetTokenExpiresAt().isAfter(now)
-                        && current.getResetTokenHash() != null
-                        && passwordEncoder.matches(request.resetToken(), current.getResetTokenHash()))
+        String resetTokenHash = hashResetToken(request.resetToken());
+        EmailVerification verification = verificationRepository
+                .findByVerifiedAtIsNotNullAndResetTokenHashAndResetTokenExpiresAtAfter(resetTokenHash, now)
                 .orElseThrow(this::invalidResetToken);
 
         var user = userRepository.findByEmailForPasswordUpdate(verification.getEmail())
@@ -153,6 +149,16 @@ public class EmailVerificationService {
     private ResponseStatusException invalidResetToken() {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "비밀번호 재설정 토큰이 유효하지 않거나 만료되었습니다.");
+    }
+
+    private String hashResetToken(String resetToken) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(resetToken.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256을 사용할 수 없습니다.", exception);
+        }
     }
 
     private ResponseStatusException invalidVerificationCode() {
