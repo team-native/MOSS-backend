@@ -1,5 +1,7 @@
 package com.teamnative.moss.domain.search.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.teamnative.moss.domain.auth.entity.UserAccount;
 import com.teamnative.moss.domain.search.dto.PlaceSearchFilter;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -10,11 +12,13 @@ import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -26,12 +30,17 @@ import jakarta.validation.constraints.NotNull;
 @Entity
 @Table(name = "places", indexes = {
         @Index(name = "idx_places_name", columnList = "name"),
-        @Index(name = "idx_places_type_location", columnList = "place_type,latitude,longitude")
+        @Index(name = "idx_places_type_location", columnList = "place_type,latitude,longitude"),
+        @Index(name = "idx_places_owner", columnList = "owner_id")
 })
 public class Place {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private UserAccount owner;
 
     @NotBlank
     @Column(nullable = false, length = 150)
@@ -169,6 +178,8 @@ public class Place {
     }
 
     public Long getId() { return id; }
+    @JsonIgnore
+    public UserAccount getOwner() { return owner; }
     public String getName() { return name; }
     public String getAddress() { return address; }
     public PlaceType getPlaceType() { return placeType; }
@@ -199,6 +210,14 @@ public class Place {
 
     public void changeVisibility(boolean publiclyVisible) {
         this.publiclyVisible = publiclyVisible;
+    }
+
+    public void assignOwner(UserAccount owner) {
+        if (owner == null) throw new IllegalArgumentException("매장 소유자는 필수입니다.");
+        if (this.owner != null && !this.owner.getId().equals(owner.getId())) {
+            throw new IllegalStateException("이미 다른 소유자가 지정된 매장입니다.");
+        }
+        this.owner = owner;
     }
 
     public void updateDetailData(Integer maxHourlyPrice, String operatingHours, boolean callRoomOnly) {

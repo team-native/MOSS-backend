@@ -1,16 +1,13 @@
 package com.teamnative.moss.domain.review.service;
 
-import com.teamnative.moss.domain.auth.entity.BusinessVerificationStatus;
-import com.teamnative.moss.domain.auth.entity.Role;
 import com.teamnative.moss.domain.auth.entity.UserAccount;
-import com.teamnative.moss.domain.auth.repository.BusinessVerificationRepository;
-import com.teamnative.moss.domain.auth.repository.UserRepository;
+import com.teamnative.moss.domain.place.service.BusinessPlaceAccessService;
 import com.teamnative.moss.domain.review.dto.BusinessReplyRequest;
 import com.teamnative.moss.domain.review.dto.BusinessReviewFilter;
 import com.teamnative.moss.domain.review.dto.BusinessReviewListResponse;
 import com.teamnative.moss.domain.review.entity.PlaceReview;
 import com.teamnative.moss.domain.review.repository.PlaceReviewRepository;
-import com.teamnative.moss.domain.search.repository.PlaceRepository;
+import com.teamnative.moss.domain.search.entity.Place;
 import java.time.LocalDateTime;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,27 +18,19 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class BusinessReviewService {
-    private final UserRepository userRepository;
-    private final BusinessVerificationRepository verificationRepository;
-    private final PlaceRepository placeRepository;
+    private final BusinessPlaceAccessService businessPlaceAccessService;
     private final PlaceReviewRepository reviewRepository;
 
-    public BusinessReviewService(UserRepository userRepository,
-                                 BusinessVerificationRepository verificationRepository,
-                                 PlaceRepository placeRepository,
+    public BusinessReviewService(BusinessPlaceAccessService businessPlaceAccessService,
                                  PlaceReviewRepository reviewRepository) {
-        this.userRepository = userRepository;
-        this.verificationRepository = verificationRepository;
-        this.placeRepository = placeRepository;
+        this.businessPlaceAccessService = businessPlaceAccessService;
         this.reviewRepository = reviewRepository;
     }
 
     @Transactional(readOnly = true)
     public BusinessReviewListResponse getReviews(String email, Long placeId, BusinessReviewFilter filter,
                                                 int page, int size) {
-        requireApprovedBusiness(email);
-        placeRepository.findById(placeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."));
+        businessPlaceAccessService.requireOwnedPlace(email, placeId);
 
         PageRequest pageRequest = PageRequest.of(page, size);
         Page<PlaceReview> result = switch (filter) {
@@ -58,8 +47,9 @@ public class BusinessReviewService {
 
     @Transactional
     public BusinessReviewListResponse.Reply addReply(String email, Long reviewId, BusinessReplyRequest request) {
-        UserAccount business = requireApprovedBusiness(email);
         PlaceReview review = findReviewForUpdate(reviewId);
+        Place ownedPlace = businessPlaceAccessService.requireOwnedPlace(email, review.getPlace());
+        UserAccount business = ownedPlace.getOwner();
         if (review.isDeleted()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다.");
         }
@@ -74,8 +64,9 @@ public class BusinessReviewService {
     @Transactional
     public BusinessReviewListResponse.Reply updateReply(String email, Long reviewId,
                                                         BusinessReplyRequest request) {
-        UserAccount business = requireApprovedBusiness(email);
         PlaceReview review = findReviewForUpdate(reviewId);
+        businessPlaceAccessService.requireOwnedPlace(email, review.getPlace());
+        UserAccount business = review.getPlace().getOwner();
         requireReplyOwner(review, business);
         ensureReplyEditable(review);
         review.updateBusinessReply(request.content().trim(), LocalDateTime.now());
@@ -84,26 +75,12 @@ public class BusinessReviewService {
 
     @Transactional
     public void deleteReply(String email, Long reviewId) {
-        UserAccount business = requireApprovedBusiness(email);
         PlaceReview review = findReviewForUpdate(reviewId);
+        businessPlaceAccessService.requireOwnedPlace(email, review.getPlace());
+        UserAccount business = review.getPlace().getOwner();
         requireReplyOwner(review, business);
         ensureReplyEditable(review);
         review.deleteBusinessReply();
-    }
-
-    private UserAccount requireApprovedBusiness(String email) {
-        UserAccount user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."));
-        if (user.getRole() != Role.BUSINESS) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "업주 계정만 이용할 수 있습니다.");
-        }
-        boolean approved = verificationRepository.findByUser_Id(user.getId())
-                .map(verification -> verification.getStatus() == BusinessVerificationStatus.APPROVED)
-                .orElse(false);
-        if (!approved) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사업자 인증 승인 후 이용할 수 있습니다.");
-        }
-        return user;
     }
 
     private PlaceReview findReviewForUpdate(Long reviewId) {
