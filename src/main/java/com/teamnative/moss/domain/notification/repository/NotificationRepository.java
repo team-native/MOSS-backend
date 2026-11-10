@@ -1,6 +1,7 @@
 package com.teamnative.moss.domain.notification.repository;
 
 import com.teamnative.moss.domain.notification.entity.Notification;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,16 +15,25 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("delete from Notification notification where notification.user.id = :userId")
     int deleteAllForUser(@Param("userId") Long userId);
 
-    Page<Notification> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    Page<Notification> findByUser_IdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
+            Long userId, LocalDateTime cutoff, Pageable pageable);
 
-    Page<Notification> findByUser_IdAndReadAtIsNullOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    Page<Notification> findByUser_IdAndReadAtIsNullAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
+            Long userId, LocalDateTime cutoff, Pageable pageable);
 
-    long countByUser_IdAndReadAtIsNull(Long userId);
+    long countByUser_IdAndReadAtIsNullAndCreatedAtGreaterThanEqual(Long userId, LocalDateTime cutoff);
 
-    Optional<Notification> findByIdAndUser_Id(Long id, Long userId);
+    Optional<Notification> findByIdAndUser_IdAndCreatedAtGreaterThanEqual(
+            Long id, Long userId, LocalDateTime cutoff);
+
+    @Modifying
+    @Query("delete from Notification notification where notification.createdAt < :cutoff")
+    int deleteOlderThan(@Param("cutoff") LocalDateTime cutoff);
 
     @Modifying
     @Query("update Notification notification set notification.readAt = :readAt "
-            + "where notification.user.id = :userId and notification.readAt is null")
-    int markAllRead(@Param("userId") Long userId, @Param("readAt") java.time.LocalDateTime readAt);
+            + "where notification.user.id = :userId and notification.readAt is null "
+            + "and notification.createdAt >= :cutoff")
+    int markAllRead(@Param("userId") Long userId, @Param("cutoff") LocalDateTime cutoff,
+                    @Param("readAt") LocalDateTime readAt);
 }
