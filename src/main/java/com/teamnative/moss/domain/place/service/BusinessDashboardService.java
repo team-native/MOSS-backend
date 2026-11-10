@@ -1,6 +1,7 @@
 package com.teamnative.moss.domain.place.service;
 
 import com.teamnative.moss.domain.place.dto.BusinessDashboardResponse;
+import com.teamnative.moss.domain.place.entity.PlaceEventStatus;
 import com.teamnative.moss.domain.place.repository.PlaceEventRepository;
 import com.teamnative.moss.domain.report.entity.ReportStatus;
 import com.teamnative.moss.domain.report.entity.ReportType;
@@ -50,8 +51,8 @@ public class BusinessDashboardService {
         return BusinessDashboardResponse.from(place,
                 reviewRepository.countByPlace_IdAndDeletedAtIsNull(placeId), recentCount, previousCount,
                 reviewRepository.countByPlace_IdAndDeletedAtIsNullAndBusinessReplyIsNull(placeId),
-                eventRepository.countByPlace_IdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                        placeId, LocalDate.now(), LocalDate.now()),
+                eventRepository.countByPlace_IdAndApprovalStatusAndDeletedAtIsNullAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        placeId, PlaceEventStatus.APPROVED, LocalDate.now(), LocalDate.now()),
                 pendingReports,
                 reportRepository.findByPlace_IdAndReportTypeAndStatusInOrderByCreatedAtDesc(
                         placeId, ReportType.INFO_ERROR, PENDING_REPORT_STATUSES, PageRequest.of(0, 5)).getContent(),

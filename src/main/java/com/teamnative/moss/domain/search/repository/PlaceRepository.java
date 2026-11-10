@@ -33,6 +33,10 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     @Query("select place from Place place where place.id = :id")
     Optional<Place> findByIdForOwnershipUpdate(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select place from Place place where place.id = :id")
+    Optional<Place> findByIdForEventUpdate(@Param("id") Long id);
+
     @Modifying
     @Query("update Place place set place.owner = null where place.owner.id = :ownerId")
     int clearOwnerByOwnerId(@Param("ownerId") Long ownerId);
