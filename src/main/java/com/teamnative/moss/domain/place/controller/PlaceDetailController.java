@@ -3,11 +3,13 @@ package com.teamnative.moss.domain.place.controller;
 import com.teamnative.moss.domain.place.dto.PlaceDetailResponse;
 import com.teamnative.moss.domain.place.service.PlaceDetailService;
 import com.teamnative.moss.global.dto.ApiResponse;
+import com.teamnative.moss.global.exception.DomainException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,7 +37,8 @@ public class PlaceDetailController {
             @AuthenticationPrincipal String email
     ) {
         if ((latitude == null) != (longitude == null)) {
-            throw new IllegalArgumentException("거리 계산에는 latitude와 longitude가 모두 필요합니다.");
+            throw new DomainException(HttpStatus.BAD_REQUEST,
+                    "거리 계산에는 latitude와 longitude가 모두 필요합니다.");
         }
         return ApiResponse.success("장소 상세를 조회했습니다.",
                 placeDetailService.getPlaceDetail(placeId, latitude, longitude, email));

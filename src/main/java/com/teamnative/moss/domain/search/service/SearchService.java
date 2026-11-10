@@ -4,10 +4,12 @@ import com.teamnative.moss.domain.search.dto.PlaceSearchResponse;
 import com.teamnative.moss.domain.search.dto.PlaceSearchFilter;
 import com.teamnative.moss.domain.search.entity.Place;
 import com.teamnative.moss.domain.search.repository.PlaceRepository;
+import com.teamnative.moss.global.exception.DomainException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -84,11 +86,11 @@ public class SearchService {
 
     static String normalize(String rawQuery) {
         if (rawQuery == null) {
-            throw new IllegalArgumentException("검색어를 입력해주세요.");
+            throw new DomainException(HttpStatus.BAD_REQUEST, "검색어를 입력해주세요.");
         }
         String query = NON_LETTER_OR_DIGIT.matcher(rawQuery.trim()).replaceAll("");
         if (query.isBlank()) {
-            throw new IllegalArgumentException("검색어에 문자 또는 숫자를 입력해주세요.");
+            throw new DomainException(HttpStatus.BAD_REQUEST, "검색어에 문자 또는 숫자를 입력해주세요.");
         }
         return query;
     }
