@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
+import java.util.List;
 import java.time.LocalDateTime;
 
 public interface UserRepository extends JpaRepository<UserAccount, Long> {
@@ -30,8 +31,8 @@ public interface UserRepository extends JpaRepository<UserAccount, Long> {
     @Query("select user from UserAccount user where user.email = :email")
     Optional<UserAccount> findByEmailForPasswordUpdate(@Param("email") String email);
 
-    @org.springframework.data.jpa.repository.Modifying
-    @org.springframework.data.jpa.repository.Query("delete from UserAccount user where user.deletedAt is not null and user.deletedAt <= :cutoff")
-    int deleteExpiredAccounts(@Param("cutoff") LocalDateTime cutoff);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from UserAccount user where user.deletedAt is not null and user.deletedAt <= :cutoff")
+    List<UserAccount> findExpiredForDeletion(@Param("cutoff") LocalDateTime cutoff);
 
 }

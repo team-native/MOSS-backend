@@ -61,4 +61,9 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
     Optional<PlaceReview> findByIdForBusinessUpdate(@Param("reviewId") Long reviewId);
 
     List<PlaceReview> findByDeletedAtIsNotNullAndRestoreUntilLessThanEqual(LocalDateTime cutoff);
+
+    @EntityGraph(attributePaths = "photoUrls")
+    List<PlaceReview> findAllByAuthor_Id(Long authorId);
+
+    List<PlaceReview> findAllByBusinessReplyAuthor_Id(Long authorId);
 }

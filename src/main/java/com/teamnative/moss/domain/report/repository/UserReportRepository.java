@@ -23,6 +23,9 @@ public interface UserReportRepository extends JpaRepository<UserReport, Long> {
     List<UserReport> findByReporter_IdOrderByCreatedAtDesc(Long reporterId);
 
     @EntityGraph(attributePaths = "photoUrls")
+    List<UserReport> findByReview_Author_Id(Long authorId);
+
+    @EntityGraph(attributePaths = "photoUrls")
     List<UserReport> findByReporter_IdAndReportTypeOrderByCreatedAtDesc(Long reporterId, ReportType reportType);
 
     @EntityGraph(attributePaths = "photoUrls")
