@@ -60,6 +60,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다.");
     }
 
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException exception,
+                                                                          HttpHeaders headers,
+                                                                          HttpStatusCode statusCode,
+                                                                          WebRequest request) {
+        HttpStatus status = HttpStatus.PAYLOAD_TOO_LARGE;
+        return ResponseEntity.status(status).body(ApiResponse.failure(status, "업로드 용량 제한을 초과했습니다."));
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
             DataIntegrityViolationException exception, HttpServletRequest request) {
@@ -73,7 +82,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(Exception exception, Object body, HttpHeaders headers,
-                                                               HttpStatusCode statusCode, WebRequest request) {
+                                                             HttpStatusCode statusCode, WebRequest request) {
         HttpStatus status = HttpStatus.valueOf(statusCode.value());
         if (status.is5xxServerError()) {
             Object traceId = request instanceof ServletWebRequest servletWebRequest
